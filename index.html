@@ -470,7 +470,7 @@ function renderViewCard(e){
   const proofHtml = e.proof_url
     ? `<img class="proof-thumb proof-open" data-src="${esc(e.proof_url)}" src="${esc(e.proof_url)}" alt="Proof of contact with ${esc(e.alum_name)}">`
     : `<div class="proof-empty">No proof attached</div>`;
-  const q = encodeURIComponent(`"${e.alum_name}" UConn`);
+  const q = encodeURIComponent(`${e.alum_name} UConn`);
   const qLinkedIn = encodeURIComponent(`${e.alum_name} UConn`);
   const lookupHtml = `
     <span class="lookup-links">
