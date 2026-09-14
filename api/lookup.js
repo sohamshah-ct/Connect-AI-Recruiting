@@ -6,7 +6,7 @@
 // text scraped in bulk days ago. A live, targeted "<name> uconn" search
 // tends to return a cleaner top result than a broad discovery query does.
 
-const { isOffTopicBio } = require('../lib/nameFilter');
+const { isRelevantBio } = require('../lib/nameFilter');
 const { ddgSearch } = require('../lib/ddg');
 
 function cleanSnippet(s) {
@@ -42,7 +42,7 @@ module.exports = async (req, res) => {
     const items = await ddgSearch(`${name} uconn`);
     for (const item of items) {
       const snippet = cleanSnippet(item.snippet);
-      if (!snippet || isOffTopicBio(snippet)) continue;
+      if (!snippet || !isRelevantBio(snippet)) continue;
       const bio = oneClause(snippet);
       if (bio.length < 15) continue; // too thin to be useful
       let source = '';

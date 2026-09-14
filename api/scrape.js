@@ -10,7 +10,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const cheerio = require('cheerio');
-const { looksLikeName, isOffTopicBio } = require('../lib/nameFilter');
+const { looksLikeName, isRelevantBio } = require('../lib/nameFilter');
 
 const CARD_SELECTORS = 'article, li, .card, .person, .profile, .alum, .alumni, .spotlight, .people, .team-member, .bio';
 const HEADING_SELECTORS = 'h1, h2, h3, h4, h5, strong, b';
@@ -47,7 +47,7 @@ function extractCandidates(html, sourceUrl) {
     let bio = cleanText($card.find('p').first().text());
     if (!bio || bio === nameText) bio = cleanText($card.text()).slice(0, 130);
     bio = bio.slice(0, 130);
-    if (!bio || isOffTopicBio(bio)) return;
+    if (!bio || !isRelevantBio(bio)) return;
 
     if (!found.has(nameText)) found.set(nameText, bio);
   });
@@ -56,6 +56,12 @@ function extractCandidates(html, sourceUrl) {
   // (a Hall of Fame roster, a simple bulleted list) with no obvious
   // "card" wrapper. Headings only — links (<a>) turned out to catch too
   // much nav/site-chrome text ("Site A-Z") to be worth the extra recall.
+  //
+  // Bio must come from an immediate sibling, never `.closest()` — on a
+  // grid/table layout, closest() can walk up into a shared ancestor that
+  // wraps MULTIPLE people, pairing one person's name with a different
+  // person's bio. No immediate sibling paragraph means no bio, not a
+  // guessed one.
   if (found.size < 30) {
     $(HEADING_SELECTORS).each((_, el) => {
       if (found.size >= 30) return false;
@@ -65,9 +71,8 @@ function extractCandidates(html, sourceUrl) {
 
       let bio = cleanText($el.next('p').text());
       if (!bio) bio = cleanText($el.parent().next('p').text());
-      if (!bio) bio = cleanText($el.closest('li, p').text()).slice(0, 130);
       bio = bio.slice(0, 130);
-      if (isOffTopicBio(bio)) return;
+      if (!bio || !isRelevantBio(bio)) return;
 
       found.set(nameText, bio);
     });
