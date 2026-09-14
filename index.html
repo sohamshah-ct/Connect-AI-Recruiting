@@ -652,7 +652,7 @@ function renderSources(){
     ? allQueries.map(q => `
         <div class="source-row" data-id="${esc(q.id)}">
           <span class="source-text" title="${esc(q.query)}">${esc(q.query)}</span>
-          ${q.last_run_at ? `<span class="source-meta">${esc(q.last_found_count ?? 0)} found</span>` : `<span class="source-meta">not run yet</span>`}
+          ${q.last_run_at ? `<span class="source-meta">${esc(q.last_found_count ?? 0)} new last run</span>` : `<span class="source-meta">not run yet</span>`}
           <button class="icon-btn del-query-btn" data-id="${esc(q.id)}" type="button">×</button>
         </div>`).join('')
     : '<div class="source-empty">No search queries yet.</div>';
@@ -665,7 +665,7 @@ function renderSources(){
     ? allPages.map(p => `
         <div class="source-row" data-id="${esc(p.id)}">
           <span class="source-text" title="${esc(p.url)}">${esc(p.label || p.url)}</span>
-          ${p.last_scanned_at ? `<span class="source-meta">${esc(p.last_found_count ?? 0)} found</span>` : `<span class="source-meta">not run yet</span>`}
+          ${p.last_scanned_at ? `<span class="source-meta">${esc(p.last_found_count ?? 0)} new last run</span>` : `<span class="source-meta">not run yet</span>`}
           <button class="icon-btn del-page-btn" data-id="${esc(p.id)}" type="button">×</button>
         </div>`).join('')
     : '<div class="source-empty">No pages watched yet.</div>';
