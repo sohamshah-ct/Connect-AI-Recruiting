@@ -82,8 +82,11 @@ module.exports = async (req, res) => {
   for (const page of pages) {
     try {
       const resp = await fetch(page.url, {
-        headers: { 'User-Agent': 'Connect.AI-Alumni-Tracker/1.0 (class project, contact via site)' },
-        signal: AbortSignal.timeout(10000),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; Connect.AI-Alumni-Tracker/1.0; class project)',
+          'Accept': 'text/html,application/xhtml+xml',
+        },
+        signal: AbortSignal.timeout(15000),
       });
       if (!resp.ok) {
         results.push({ url: page.url, error: `HTTP ${resp.status}` });
@@ -109,7 +112,8 @@ module.exports = async (req, res) => {
 
       results.push({ url: page.url, found: candidates.length, added: fresh.length });
     } catch (err) {
-      results.push({ url: page.url, error: String(err.message || err) });
+      const detail = err?.cause?.message || err?.cause?.code || err?.message || String(err);
+      results.push({ url: page.url, error: `${err.name || 'Error'}: ${detail}` });
     }
   }
 
