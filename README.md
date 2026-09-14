@@ -1,35 +1,18 @@
 # Alumni Outreach Tracker
 
-Static site + Supabase backend. No build step, no framework — plain HTML/JS, easy to hand off to anyone in the class to tweak.
+**Live:** https://connect-ai-recruiting.vercel.app
 
-## Set up the database (~3 min, free, no credit card)
+A shared tracker for Connect.AI's alumni outreach. Everyone in the class logs the alumni they contact — status, notes, and a screenshot as proof it happened — and it updates live for anyone with the link. No login required.
 
-1. Go to [supabase.com](https://supabase.com) → New project.
-2. Once it's created, open **SQL Editor → New query**, paste in the contents of `supabase/schema.sql`, and hit Run. That creates the `entries` table, the reactions function, and a public `proof` storage bucket for screenshots.
-3. Go to **Settings → API** and copy the **Project URL** and the **anon public** key.
-4. Open `config.js` in this repo and paste them in:
-   ```js
-   window.SUPABASE_URL = "https://xxxx.supabase.co";
-   window.SUPABASE_ANON_KEY = "eyJ...";
-   ```
-   Commit and push that change (or edit it directly on GitHub — it's a two-line file).
+## What it does
 
-## Deploy to Vercel (~2 min)
+- Log an alumni contact with status (to contact, awaiting reply, in conversation, visit scheduled, complete, no response), method, notes, and a required proof-of-contact screenshot.
+- Edit any entry after the fact to fill in details or swap the screenshot.
+- One-click Google and LinkedIn lookups next to each name.
+- 👏 / 🎉 reactions on entries.
+- A leaderboard ranking who's contacted the most people — click a name to filter the feed to just their entries.
+- Everything's shared and updates live across everyone who has the page open.
 
-1. Go to [vercel.com/new](https://vercel.com/new), import this GitHub repo.
-2. Framework preset: **Other** (it's a static site, no build command needed).
-3. Deploy. You'll get a public `*.vercel.app` link — anyone can open it, no login required.
+## Stack
 
-Every push to the connected branch redeploys automatically.
-
-## What's in here
-
-- `index.html` — the whole app (form, entry feed, reactions, leaderboard).
-- `config.js` — your two Supabase keys. Safe to be public; the anon key only allows what the database policies in `schema.sql` permit.
-- `supabase/schema.sql` — table, storage bucket, and RLS policies. Currently wide open (anyone can add/edit any entry, no login) — tighten `schema.sql`'s policies later if you want people restricted to editing their own entries.
-
-## Notes
-
-- Proof-of-contact screenshots upload straight to Supabase Storage and show as a thumbnail on the entry; click it to view full size.
-- 👏 / 🎉 reactions increment atomically (a Postgres function), so simultaneous claps don't overwrite each other.
-- The leaderboard at the bottom is clickable — clicking a name filters the feed above to just their logged entries, so you can click into anyone's "proof" instantly while presenting.
+Plain HTML/JS, no build step, hosted on Vercel. Data and screenshot storage run on Supabase (Postgres + Storage). See `supabase/schema.sql` and `supabase/migrations/` for the database setup.
