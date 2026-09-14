@@ -668,7 +668,10 @@ function renderSources(){
         </div>`).join('')
     : '<div class="source-empty">No search queries yet.</div>';
   qEl.querySelectorAll('.del-query-btn').forEach(btn => {
-    btn.addEventListener('click', () => removeSource('search_queries', btn.dataset.id, () => { allQueries = allQueries.filter(q => q.id !== btn.dataset.id); }));
+    btn.addEventListener('click', () => {
+      if(!confirm('Remove this search query?')) return;
+      removeSource('search_queries', btn.dataset.id, () => { allQueries = allQueries.filter(q => q.id !== btn.dataset.id); });
+    });
   });
 
   const pEl = document.getElementById('pageList');
@@ -681,7 +684,10 @@ function renderSources(){
         </div>`).join('')
     : '<div class="source-empty">No pages watched yet.</div>';
   pEl.querySelectorAll('.del-page-btn').forEach(btn => {
-    btn.addEventListener('click', () => removeSource('watch_pages', btn.dataset.id, () => { allPages = allPages.filter(p => p.id !== btn.dataset.id); }));
+    btn.addEventListener('click', () => {
+      if(!confirm('Stop watching this page?')) return;
+      removeSource('watch_pages', btn.dataset.id, () => { allPages = allPages.filter(p => p.id !== btn.dataset.id); });
+    });
   });
 }
 
