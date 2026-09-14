@@ -213,29 +213,6 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
   <div style="display:flex; flex-direction:column; gap:22px;">
   <div class="panel">
     <div class="panel-head">
-      <h2>Suggested contacts</h2>
-      <div class="sub">Know someone worth reaching out to? Drop their name in — anyone can claim it.</div>
-    </div>
-    <div class="panel-body">
-      <form id="suggestForm" style="display:flex; flex-direction:column; gap:10px;">
-        <div>
-          <label for="sg-name">Alumni name</label>
-          <input id="sg-name" required placeholder="e.g. Marcus Cole '19" autocomplete="off">
-        </div>
-        <div>
-          <label for="sg-note">Why them? (optional)</label>
-          <input id="sg-note" placeholder="e.g. Works in AI at a startup">
-        </div>
-        <button class="primary" type="submit" id="suggestBtn" style="margin-top:0;">Add suggestion</button>
-      </form>
-      <div class="suggestion-list" id="suggestionList" style="margin-top:14px;">
-        <div class="leader-empty">No suggestions yet — add one above.</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-head">
       <h2>Log outreach</h2>
       <div class="sub">One entry per alumni contact — update it later as things progress.</div>
     </div>
@@ -290,6 +267,29 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
         <button class="primary" type="submit" id="submitBtn">Add entry</button>
         <div class="form-note" id="formNote">Saves for the whole class to see.</div>
       </form>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Suggested contacts</h2>
+      <div class="sub">Know someone worth reaching out to? Drop their name in — anyone can claim it.</div>
+    </div>
+    <div class="panel-body">
+      <form id="suggestForm" style="display:flex; flex-direction:column; gap:10px;">
+        <div>
+          <label for="sg-name">Alumni name</label>
+          <input id="sg-name" required placeholder="e.g. Marcus Cole '19" autocomplete="off">
+        </div>
+        <div>
+          <label for="sg-note">Why them? (optional)</label>
+          <input id="sg-note" placeholder="e.g. Works in AI at a startup">
+        </div>
+        <button class="primary" type="submit" id="suggestBtn" style="margin-top:0;">Add suggestion</button>
+      </form>
+      <div class="suggestion-list" id="suggestionList" style="margin-top:14px;">
+        <div class="leader-empty">No suggestions yet — add one above.</div>
+      </div>
     </div>
   </div>
   </div>
