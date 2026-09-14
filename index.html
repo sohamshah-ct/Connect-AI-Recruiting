@@ -219,21 +219,32 @@ button.primary:disabled{opacity:.5; cursor:not-allowed;}
 .auto-card-bottom{display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:2px;}
 .auto-card .claim-btn{font-size:12px; padding:5px 9px;}
 
-/* ---------- leaderboard (bottom) ---------- */
-.leaderboard{background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow);}
-.leader-grid{display:flex; flex-direction:column; padding:4px 18px 18px;}
-.leader-row{display:grid; grid-template-columns:28px 1fr 2fr 60px; align-items:center; gap:14px; padding:10px 4px;
-  border-bottom:1px dashed var(--border); background:none; border-left:none; border-right:none; border-top:none;
-  cursor:pointer; text-align:left; font-family:inherit; color:var(--text); font-size:14px;}
-.leader-row:last-child{border-bottom:none;}
-.leader-row:hover{background:var(--surface-2);}
-.leader-row.active{background:var(--accent-soft);}
-.leader-rank{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--text-muted);}
-.leader-rank.top1{color:var(--crimson); font-weight:700;}
+/* ---------- leaderboard ---------- */
+.leaderboard{
+  background:linear-gradient(160deg, var(--accent-soft) 0%, var(--surface) 40%);
+  border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden;
+}
+.leaderboard .panel-head h2{display:flex; align-items:center; gap:9px;}
+.leader-grid{display:flex; flex-direction:column; gap:8px; padding:6px 18px 20px;}
+.leader-row{
+  display:grid; grid-template-columns:38px 1fr 2fr 44px; align-items:center; gap:14px; padding:11px 12px;
+  border:1px solid transparent; border-radius:10px; background:var(--bg);
+  cursor:pointer; text-align:left; font-family:inherit; color:var(--text); font-size:14px;
+  transition:border-color .15s ease, transform .1s ease;
+}
+.leader-row:hover{border-color:var(--border); transform:translateX(2px);}
+.leader-row.active{border-color:var(--accent); background:var(--accent-soft);}
+.leader-row.rank-1{
+  background:linear-gradient(90deg, var(--warn-soft) 0%, var(--bg) 65%);
+  border-color:var(--warn); padding:15px 14px; font-size:15.5px;
+}
+.leader-rank{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--text-muted); text-align:center;}
+.leader-rank.medal{font-size:20px; font-family:inherit;}
 .leader-name{font-weight:600;}
-.leader-bar-wrap{height:8px; background:var(--surface-2); border-radius:99px; overflow:hidden;}
-.leader-bar{height:100%; background:var(--crimson); border-radius:99px;}
-.leader-count{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-size:14px; text-align:right;}
+.leader-row.rank-1 .leader-name{font-weight:700; font-size:16.5px;}
+.leader-bar-wrap{height:9px; background:var(--surface-2); border-radius:99px; overflow:hidden;}
+.leader-bar{height:100%; border-radius:99px; background:linear-gradient(90deg, var(--crimson), var(--warn));}
+.leader-count{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-size:15px; font-weight:600; text-align:right;}
 .leader-empty{color:var(--text-muted); font-size:13.5px; padding:10px 4px;}
 
 /* ---------- lightbox ---------- */
@@ -267,6 +278,14 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
 </p>
 
 <div class="stats" id="stats"></div>
+
+<div class="leaderboard">
+  <div class="panel-head">
+    <h2>🏆 Leaderboard — who's contacted the most people</h2>
+    <div class="sub">Click a name to filter the outreach feed to just their entries</div>
+  </div>
+  <div class="leader-grid" id="leaderGrid"><div class="leader-empty">No entries yet — be the first.</div></div>
+</div>
 
 <div class="panel">
   <div class="panel-head" style="border-bottom:none; padding-bottom:0;">
@@ -421,14 +440,6 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
     <div class="status-msg" id="listStatus"></div>
     <div class="entries" id="entries"></div>
   </div>
-</div>
-
-<div class="leaderboard">
-  <div class="panel-head">
-    <h2>Leaderboard — who's contacted the most people</h2>
-    <div class="sub">Click a name to filter the list above to just their entries</div>
-  </div>
-  <div class="leader-grid" id="leaderGrid"><div class="leader-empty">No entries yet — be the first.</div></div>
 </div>
 
 <footer>Connect.AI · Alumni Outreach Tracker · shared live with everyone who opens this link</footer>
@@ -1066,9 +1077,10 @@ function renderLeaderboard(){
   const el = document.getElementById('leaderGrid');
   if(!rows.length){ el.innerHTML = '<div class="leader-empty">No entries yet — be the first.</div>'; return; }
   const max = rows[0][1];
+  const medals = ['🥇','🥈','🥉'];
   el.innerHTML = rows.map(([name,count],i) => `
-    <button class="leader-row ${activePerson===name?'active':''}" data-name="${esc(name)}" type="button">
-      <span class="leader-rank ${i===0?'top1':''}">${i+1}</span>
+    <button class="leader-row ${activePerson===name?'active':''} ${i===0?'rank-1':''}" data-name="${esc(name)}" type="button">
+      <span class="leader-rank ${i<3?'medal':''}">${i<3 ? medals[i] : i+1}</span>
       <span class="leader-name">${esc(name)}</span>
       <span class="leader-bar-wrap"><span class="leader-bar" style="width:${Math.max(6,(count/max)*100)}%"></span></span>
       <span class="leader-count">${count}</span>
@@ -1208,17 +1220,24 @@ async function init(){
   }
   allEntries = data || [];
 
+  const loadErrors = [];
+
   const {data: sgData, error: sgError} = await supa.from('suggestions').select('*').order('created_at', {ascending:false});
-  if(sgError) console.error(sgError);
+  if(sgError){ console.error(sgError); loadErrors.push('suggestions'); }
   allSuggestions = sgData || [];
 
   const {data: qData, error: qError} = await supa.from('search_queries').select('*').order('created_at', {ascending:false});
-  if(qError) console.error(qError);
+  if(qError){ console.error(qError); loadErrors.push('search queries'); }
   allQueries = qData || [];
 
   const {data: pData, error: pError} = await supa.from('watch_pages').select('*').order('created_at', {ascending:false});
-  if(pError) console.error(pError);
+  if(pError){ console.error(pError); loadErrors.push('watched pages'); }
   allPages = pData || [];
+
+  if(loadErrors.length){
+    document.getElementById('listStatus').textContent =
+      `Couldn't load: ${loadErrors.join(', ')} — reload the page. If this keeps happening, check the browser console for the real error.`;
+  }
 
   render();
 
