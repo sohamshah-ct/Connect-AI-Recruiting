@@ -168,6 +168,13 @@ button.primary:disabled{opacity:.5; cursor:not-allowed;}
   padding:2px 4px; flex-shrink:0; line-height:1;
 }
 .drop-suggestion-btn:hover{color:var(--crit);}
+.icon-btn{
+  background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+  border-radius:7px; padding:7px 12px; font-size:12.5px; font-weight:600;
+  cursor:pointer; transition:border-color .15s ease, color .15s ease;
+}
+.icon-btn:hover{border-color:var(--accent); color:var(--accent);}
+.icon-btn:disabled{opacity:.5; cursor:not-allowed;}
 
 /* ---------- auto-discovery sources ---------- */
 .source-label{font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;}
