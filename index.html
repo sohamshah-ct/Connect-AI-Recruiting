@@ -559,7 +559,7 @@ function renderAutoFound(){
 }
 
 
-const CONNECT_AI_BLURB = "I'm a current student in UConn's Connect.AI program — a course where students work as a forward-deployed engineering team. We spend the first half of the semester learning AI engineering and consulting fundamentals, then the second half embedded with a real partner business, scoping, building, and shipping something that actually runs.";
+const CONNECT_AI_BLURB = "I'm a current student in UConn's Connect.AI program, and I'm genuinely excited about it — it's our inaugural semester, and we're a small group working as a forward-deployed engineering team: the first half learning AI engineering and consulting fundamentals, the second half embedded with a real partner business, scoping, building, and shipping something that actually runs.";
 
 let emailContacts = new Map();
 
@@ -574,7 +574,7 @@ function buildEmailTemplate(contact, bio){
   const bioLine = bio
     ? `\n\n[Double-check before sending: found this about them — "${bio}" — worth a line about it if it's accurate.]`
     : `\n\n[Add a line here about anything you know about their background — or click "Look up info" above.]`;
-  const body = `Hi ${firstName},\n\nMy name is ${you}. ${CONNECT_AI_BLURB}${bioLine}\n\nWould you be open to a quick 15-minute call sometime in the next couple weeks? I'd love to hear about your experience and how you got where you are.\n\nBest,\n${you}\nConnect.AI, University of Connecticut`;
+  const body = `Hi ${firstName},\n\nMy name is ${you}. ${CONNECT_AI_BLURB}${bioLine}\n\nWe meet Tuesdays and Thursdays, 11:00am–12:15pm — I'd love to have you join a session sometime, in person or over video call, whichever's easier for you. Even just a quick 15-minute call works too, if that's a better fit.\n\nWould any of that work for you in the next couple weeks? I'd genuinely love to hear about your path since UConn.\n\nBest,\n${you}\nConnect.AI, University of Connecticut`;
 
   return {subject, body};
 }
