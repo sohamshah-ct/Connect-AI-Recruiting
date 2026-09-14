@@ -101,8 +101,8 @@ module.exports = async (req, res) => {
         seenThisQuery.add(key);
         known.add(key);
 
-        const snippet = (item.snippet || '').replace(/\s+/g, ' ').slice(0, 160);
-        const note = `Auto-found via search "${q.query}" — ${snippet || item.link}`.slice(0, 220);
+        const snippet = (item.snippet || '').replace(/\s+/g, ' ').slice(0, 120);
+        const note = `Found via search — ${snippet || item.link}`.slice(0, 180);
 
         const { error: insErr } = await supa.from('suggestions').insert({
           alum_name: name,

@@ -148,7 +148,16 @@ button.primary:disabled{opacity:.5; cursor:not-allowed;}
 .suggestion-main{flex:1; min-width:0;}
 .suggestion-name{font-weight:600; font-size:13.5px;}
 .suggestion-meta{font-size:11.5px; color:var(--text-muted); margin-top:1px;}
-.suggestion-note{font-size:12.5px; color:var(--text-muted); margin-top:2px; font-style:italic;}
+.suggestion-note{
+  font-size:12.5px; color:var(--text-muted); margin-top:2px; font-style:italic;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden; text-overflow:ellipsis; line-height:1.35;
+}
+.suggestion-tag{
+  font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+  color:var(--text-muted); background:var(--surface-2); border:1px solid var(--border);
+  border-radius:99px; padding:1px 7px; margin-left:6px; vertical-align:middle;
+}
 .claim-btn{
   background:var(--crimson); color:#fff; border:none; border-radius:7px; padding:6px 11px;
   font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0;
@@ -519,17 +528,19 @@ function renderSuggestions(){
     return;
   }
   const list = allSuggestions.slice().sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
-  el.innerHTML = list.map(s => `
+  el.innerHTML = list.map(s => {
+    const isAuto = s.suggested_by === 'Auto-scan' || s.suggested_by === 'Auto-search';
+    return `
     <div class="suggestion-row" data-id="${esc(s.id)}">
       <div class="suggestion-main">
-        <div class="suggestion-name">${esc(s.alum_name)}</div>
-        <div class="suggestion-meta">suggested by ${esc(s.suggested_by)}</div>
-        ${s.note ? `<div class="suggestion-note">${esc(s.note)}</div>` : ''}
+        <div class="suggestion-name">${esc(s.alum_name)}${isAuto ? '<span class="suggestion-tag">auto-found</span>' : ''}</div>
+        <div class="suggestion-meta">${isAuto ? 'found automatically' : 'suggested by ' + esc(s.suggested_by)}</div>
+        ${s.note ? `<div class="suggestion-note" title="${esc(s.note)}">${esc(s.note)}</div>` : ''}
       </div>
       <button class="claim-btn" data-id="${esc(s.id)}" data-name="${esc(s.alum_name)}" type="button">I'll reach out</button>
       <button class="drop-suggestion-btn" data-id="${esc(s.id)}" type="button" title="Remove suggestion" aria-label="Remove suggestion">×</button>
     </div>
-  `).join('');
+  `;}).join('');
 
   el.querySelectorAll('.claim-btn').forEach(btn => {
     btn.addEventListener('click', () => claimSuggestion(btn.dataset.id, btn.dataset.name));
