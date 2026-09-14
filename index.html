@@ -198,6 +198,9 @@ button.primary:disabled{opacity:.5; cursor:not-allowed;}
 .lookup-row .form-note{margin-top:0;}
 .tool-grid{display:grid; grid-template-columns:340px 1fr; gap:22px; align-items:start;}
 @media (max-width:820px){ .tool-grid{grid-template-columns:1fr;} }
+.tool-grid-3{display:grid; grid-template-columns:repeat(3, 1fr); gap:22px; align-items:start; margin-bottom:16px;}
+@media (max-width:1000px){ .tool-grid-3{grid-template-columns:1fr 1fr;} }
+@media (max-width:640px){ .tool-grid-3{grid-template-columns:1fr;} }
 
 /* ---------- auto-found suggestions ---------- */
 .auto-found-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px;}
@@ -328,23 +331,33 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
     </div>
 
     <div class="tool-section" data-tool="discovery" hidden>
-      <div class="tool-grid">
-        <div>
-          <div class="source-label">Search queries</div>
-          <div class="form-note" style="margin-top:0; margin-bottom:8px;">Best-effort — the search provider sometimes rate-limits this server, so it can come back empty even with queries added. Pages watched (right) is the more reliable source.</div>
-          <form id="addQueryForm" class="source-add-row">
-            <input id="new-query" placeholder="e.g. computer science alumni AI startup" autocomplete="off">
-            <button class="icon-btn" type="submit">Add</button>
-          </form>
-          <div class="source-list" id="queryList"></div>
-        </div>
+      <div class="tool-grid-3">
         <div>
           <div class="source-label">Pages watched</div>
+          <div class="form-note" style="margin-top:0; margin-bottom:8px;">Exact pages you point it at. Most reliable — reads the page directly, plus follows a few profile-shaped links off it.</div>
           <form id="addPageForm" class="source-add-row">
             <input id="new-page" placeholder="https://…" autocomplete="off">
             <button class="icon-btn" type="submit">Add</button>
           </form>
           <div class="source-list" id="pageList"></div>
+        </div>
+        <div>
+          <div class="source-label">Common Crawl domains</div>
+          <div class="form-note" style="margin-top:0; margin-bottom:8px;">Discovers alumni-shaped pages across a whole subdomain via Common Crawl's free public web index — the same open crawl data search engines are built from. No pages to pick by hand.</div>
+          <form id="addDomainForm" class="source-add-row">
+            <input id="new-domain" placeholder="e.g. business.uconn.edu" autocomplete="off">
+            <button class="icon-btn" type="submit">Add</button>
+          </form>
+          <div class="source-list" id="domainList"></div>
+        </div>
+        <div>
+          <div class="source-label">Search queries</div>
+          <div class="form-note" style="margin-top:0; margin-bottom:8px;">Best-effort — the search provider sometimes rate-limits this server, so it can come back empty even with queries added.</div>
+          <form id="addQueryForm" class="source-add-row">
+            <input id="new-query" placeholder="e.g. computer science alumni AI startup" autocomplete="off">
+            <button class="icon-btn" type="submit">Add</button>
+          </form>
+          <div class="source-list" id="queryList"></div>
         </div>
       </div>
       <button class="primary" type="button" id="runNowBtn">Run auto-discovery now</button>
@@ -481,6 +494,7 @@ let allEntries = [];
 let allSuggestions = [];
 let allQueries = [];
 let allPages = [];
+let allDomains = [];
 let activeFilter = 'all';
 let activePerson = null;
 let searchTerm = '';
@@ -694,6 +708,22 @@ function renderSources(){
       removeSource('watch_pages', btn.dataset.id, () => { allPages = allPages.filter(p => p.id !== btn.dataset.id); });
     });
   });
+
+  const dEl = document.getElementById('domainList');
+  dEl.innerHTML = allDomains.length
+    ? allDomains.map(d => `
+        <div class="source-row" data-id="${esc(d.id)}">
+          <span class="source-text" title="${esc(d.host)}">${esc(d.label || d.host)}</span>
+          ${d.last_run_at ? `<span class="source-meta">${esc(d.last_found_count ?? 0)} new last run</span>` : `<span class="source-meta">not run yet</span>`}
+          <button class="icon-btn del-domain-btn" data-id="${esc(d.id)}" type="button">×</button>
+        </div>`).join('')
+    : '<div class="source-empty">No domains yet.</div>';
+  dEl.querySelectorAll('.del-domain-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if(!confirm('Stop discovering from this domain?')) return;
+      removeSource('discover_domains', btn.dataset.id, () => { allDomains = allDomains.filter(d => d.id !== btn.dataset.id); });
+    });
+  });
 }
 
 async function removeSource(table, id, localUpdate){
@@ -737,19 +767,37 @@ document.getElementById('addPageForm').addEventListener('submit', async (e) => {
   renderSources();
 });
 
+document.getElementById('addDomainForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('new-domain');
+  let host = input.value.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if(!host) return;
+  input.value = '';
+  if(supa){
+    const {data, error} = await supa.from('discover_domains').insert({host}).select().single();
+    if(error){ alert('Could not add — it may already exist.'); return; }
+    allDomains.unshift(data);
+  } else {
+    allDomains.unshift({id:'local-'+Date.now(), host});
+  }
+  renderSources();
+});
+
 document.getElementById('runNowBtn').addEventListener('click', async () => {
   const btn = document.getElementById('runNowBtn');
   const note = document.getElementById('runNowNote');
   btn.disabled = true; btn.textContent = 'Running…';
   note.textContent = '';
   try{
-    const [scrapeRes, searchRes] = await Promise.all([
+    const [scrapeRes, searchRes, discoverRes] = await Promise.all([
       fetch('/api/scrape').then(r => r.json()).catch(err => ({error: String(err)})),
       fetch('/api/search').then(r => r.json()).catch(err => ({error: String(err)})),
+      fetch('/api/discover').then(r => r.json()).catch(err => ({error: String(err)})),
     ]);
     const scrapeAdded = (scrapeRes.results || []).reduce((n, r) => n + (r.added || 0), 0);
     const searchAdded = (searchRes.results || []).reduce((n, r) => n + (r.added || 0), 0);
-    note.textContent = `Done — ${scrapeAdded + searchAdded} new suggestion(s) found.`;
+    const discoverAdded = (discoverRes.results || []).reduce((n, r) => n + (r.added || 0), 0);
+    note.textContent = `Done — ${scrapeAdded + searchAdded + discoverAdded} new suggestion(s) found.`;
     if(supa){
       const {data} = await supa.from('suggestions').select('*').order('created_at', {ascending:false});
       allSuggestions = data || [];
@@ -757,6 +805,8 @@ document.getElementById('runNowBtn').addEventListener('click', async () => {
       allQueries = qData || [];
       const {data: pData} = await supa.from('watch_pages').select('*');
       allPages = pData || [];
+      const {data: dData} = await supa.from('discover_domains').select('*');
+      allDomains = dData || [];
       render();
     }
   } catch(err){
@@ -1260,6 +1310,10 @@ async function init(){
   const {data: pData, error: pError} = await supa.from('watch_pages').select('*').order('created_at', {ascending:false});
   if(pError){ console.error(pError); loadErrors.push('watched pages'); }
   allPages = pData || [];
+
+  const {data: dData, error: dError} = await supa.from('discover_domains').select('*').order('created_at', {ascending:false});
+  if(dError){ console.error(dError); loadErrors.push('discovery domains'); }
+  allDomains = dData || [];
 
   if(loadErrors.length){
     document.getElementById('listStatus').textContent =
