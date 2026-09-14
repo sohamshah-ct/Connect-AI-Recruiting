@@ -25,6 +25,8 @@ function cleanText(s) {
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/([a-zA-Z])(\d)/g, '$1 $2')
     .replace(/(\d)([a-zA-Z])/g, '$1 $2')
+    .replace(/\)([^\s)])/g, ') $1')
+    .replace(/([a-z])\(/g, '$1 (')
     .replace(/\s+/g, ' ')
     .trim();
 }

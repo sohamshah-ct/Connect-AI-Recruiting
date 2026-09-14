@@ -189,12 +189,21 @@ button.primary:disabled{opacity:.5; cursor:not-allowed;}
 .auto-found-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px;}
 .auto-found-grid[hidden]{display:none;}
 .auto-card{
-  border:1px solid var(--border); border-radius:8px; padding:10px 11px; background:var(--bg);
-  display:flex; flex-direction:column; gap:6px;
+  border:1px solid var(--border); border-radius:10px; padding:12px 13px; background:var(--bg);
+  display:flex; flex-direction:column; gap:7px;
 }
-.auto-card .suggestion-name{font-size:14px;}
-.auto-card .suggestion-note{-webkit-line-clamp:3; font-size:12px;}
-.auto-card-bottom{display:flex; justify-content:space-between; align-items:center; gap:6px;}
+.auto-card .suggestion-name{font-size:14.5px;}
+.auto-card .source-chip{
+  font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;
+  color:var(--accent); background:var(--accent-soft); border-radius:5px; padding:2px 7px;
+  display:inline-block; width:fit-content;
+}
+.auto-card .bio-text{
+  font-size:12.5px; color:var(--text); line-height:1.5; opacity:.85;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+  overflow:hidden; text-overflow:ellipsis;
+}
+.auto-card-bottom{display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:2px;}
 .auto-card .claim-btn{font-size:12px; padding:5px 9px;}
 
 /* ---------- leaderboard (bottom) ---------- */
@@ -309,29 +318,6 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
 
   <div class="panel">
     <div class="panel-head">
-      <h2>Suggested contacts</h2>
-      <div class="sub">Know someone worth reaching out to? Drop their name in — anyone can claim it.</div>
-    </div>
-    <div class="panel-body">
-      <form id="suggestForm" style="display:flex; flex-direction:column; gap:10px;">
-        <div>
-          <label for="sg-name">Alumni name</label>
-          <input id="sg-name" required placeholder="e.g. Marcus Cole '19" autocomplete="off">
-        </div>
-        <div>
-          <label for="sg-note">Why them? (optional)</label>
-          <input id="sg-note" placeholder="e.g. Works in AI at a startup">
-        </div>
-        <button class="primary" type="submit" id="suggestBtn" style="margin-top:0;">Add suggestion</button>
-      </form>
-      <div class="suggestion-list" id="suggestionList" style="margin-top:14px;">
-        <div class="leader-empty">No suggestions yet — add one above.</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-head">
       <h2>Auto-discovery</h2>
       <div class="sub">Runs daily on its own. Add sources or run it now.</div>
     </div>
@@ -356,6 +342,29 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
       <div class="form-note" id="runNowNote"></div>
     </div>
   </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Suggested contacts</h2>
+      <div class="sub">Know someone worth reaching out to? Drop their name in — anyone can claim it.</div>
+    </div>
+    <div class="panel-body">
+      <form id="suggestForm" style="display:flex; flex-direction:column; gap:10px;">
+        <div>
+          <label for="sg-name">Alumni name</label>
+          <input id="sg-name" required placeholder="e.g. Marcus Cole '19" autocomplete="off">
+        </div>
+        <div>
+          <label for="sg-note">Why them? (optional)</label>
+          <input id="sg-note" placeholder="e.g. Works in AI at a startup">
+        </div>
+        <button class="primary" type="submit" id="suggestBtn" style="margin-top:0;">Add suggestion</button>
+      </form>
+      <div class="suggestion-list" id="suggestionList" style="margin-top:14px;">
+        <div class="leader-empty">No suggestions yet — add one above.</div>
+      </div>
+    </div>
+  </div>
   </div>
 
   <div style="display:flex; flex-direction:column; gap:22px;">
@@ -367,7 +376,7 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
       </div>
       <button class="icon-btn" type="button" id="toggleAutoFound">Show</button>
     </div>
-    <div class="panel-body auto-found-grid" id="autoFoundGrid" hidden>
+    <div class="panel-body auto-found-grid" id="autoFoundGrid">
       <div class="leader-empty">Nothing found yet.</div>
     </div>
   </div>
@@ -400,14 +409,14 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
       </div>
       <div>
         <label for="emailSubject">Subject</label>
-        <input id="emailSubject" readonly>
+        <input id="emailSubject">
       </div>
       <div>
         <label for="emailBody">Body</label>
-        <textarea id="emailBody" readonly style="min-height:220px; font-family:'IBM Plex Sans',sans-serif; line-height:1.5;"></textarea>
+        <textarea id="emailBody" style="min-height:220px; font-family:'IBM Plex Sans',sans-serif; line-height:1.5;"></textarea>
       </div>
       <button class="primary" type="button" id="copyEmailBtn" style="margin-top:0;">Copy to clipboard</button>
-      <div class="form-note" id="emailNote"></div>
+      <div class="form-note" id="emailNote">Auto-found details can be rough — read it over and edit before sending.</div>
     </div>
   </div>
   </div>
@@ -461,7 +470,7 @@ let searchTerm = '';
 let supa = null;
 let proofFile = null;
 let editingId = null;
-let showAutoFound = false;
+let showAutoFound = true;
 let selectedEmailContact = '';
 
 function esc(s){
@@ -483,6 +492,23 @@ function render(){
   renderEmailTemplate();
 }
 
+// Backend notes look like "Found on foundation.uconn.edu — bio text" or
+// "Found via search — snippet text". Split so the UI can style the source
+// as a small chip and the bio as normal readable text, instead of one
+// dumped grey blob.
+function splitNote(note){
+  if(!note) return {source:'', bio:''};
+  const idx = note.indexOf(' — ');
+  if(idx === -1) return {source:'', bio: note};
+  return {source: note.slice(0, idx).trim(), bio: note.slice(idx + 3).trim()};
+}
+function sourceChipLabel(source){
+  const m = source.match(/^Found on (.+)$/);
+  if(m) return m[1];
+  if(/^Found via search$/.test(source)) return 'web search';
+  return source;
+}
+
 function renderAutoFound(){
   const autoOnes = allSuggestions.filter(isAutoSuggestion);
   document.getElementById('autoFoundCount').textContent = autoOnes.length;
@@ -495,16 +521,18 @@ function renderAutoFound(){
     grid.innerHTML = '<div class="leader-empty">Nothing found yet — add a search query or page in Auto-discovery, then run it.</div>';
     return;
   }
-  grid.innerHTML = autoOnes.map(s => `
+  grid.innerHTML = autoOnes.map(s => {
+    const {source, bio} = splitNote(s.note);
+    return `
     <div class="auto-card" data-id="${esc(s.id)}">
       <div class="suggestion-name">${esc(s.alum_name)}</div>
-      ${s.note ? `<div class="suggestion-note" title="${esc(s.note)}">${esc(s.note)}</div>` : ''}
+      ${source ? `<span class="source-chip">${esc(sourceChipLabel(source))}</span>` : ''}
+      ${bio ? `<div class="bio-text" title="${esc(bio)}">${esc(bio)}</div>` : ''}
       <div class="auto-card-bottom">
         <button class="claim-btn" data-id="${esc(s.id)}" data-name="${esc(s.alum_name)}" type="button">I'll reach out</button>
         <button class="drop-suggestion-btn" data-id="${esc(s.id)}" type="button" title="Remove" aria-label="Remove">×</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;}).join('');
   grid.querySelectorAll('.claim-btn').forEach(btn => {
     btn.addEventListener('click', () => claimSuggestion(btn.dataset.id, btn.dataset.name));
   });
@@ -521,36 +549,63 @@ document.getElementById('toggleAutoFound').addEventListener('click', () => {
 const CONNECT_AI_BLURB = "I'm a current student in UConn's Connect.AI program — a course where students work as a forward-deployed engineering team. We spend the first half of the semester learning AI engineering and consulting fundamentals, then the second half embedded with a real partner business, scoping, building, and shipping something that actually runs.";
 
 function stripNotePrefix(note){
-  if(!note) return '';
-  return note.replace(/^(Found on [^—]+—\s*|Found via search —\s*|Auto-found[^—]*—\s*)/, '').trim();
+  return splitNote(note).bio;
 }
+
+// Cut a scraped bio down to one clean clause instead of dumping the raw
+// (often garbled, mid-sentence) scraped text — and never long enough to
+// look like finished, ready-to-send prose.
+function shortBioClause(bio){
+  if(!bio) return '';
+  let clause = bio.split(/[.;]\s|\s—\s/)[0].trim();
+  const CAP = 90;
+  if(clause.length > CAP){
+    clause = clause.slice(0, CAP);
+    const lastSpace = clause.lastIndexOf(' ');
+    if(lastSpace > 40) clause = clause.slice(0, lastSpace);
+    clause += '…';
+  }
+  return clause;
+}
+
+let emailContacts = new Map();
 
 function buildEmailTemplate(contact){
   const you = document.getElementById('f-you').value.trim() || localStorage.getItem('outreach-you') || '[Your name]';
   const firstName = (contact.alum_name || '').split(' ')[0];
-  const bio = stripNotePrefix(contact.note);
+  const bio = shortBioClause(stripNotePrefix(contact.note));
 
   const subject = `UConn Connect.AI — quick hello from a current student`;
+  // Bracketed on purpose: auto-found details can be wrong or garbled, so
+  // this should always read as a placeholder to check, never as
+  // finished text someone could copy-paste without looking at it.
   const bioLine = bio
-    ? `\n\nI came across your name and saw: "${bio}" — I'd love to hear more about your path from UConn into that.`
-    : '';
+    ? `\n\n[Double-check before sending: I saw a note that you may be connected to "${bio}" — worth a line about that if it's accurate.]`
+    : `\n\n[Add a line here about anything you know about their background.]`;
   const body = `Hi ${firstName},\n\nMy name is ${you}. ${CONNECT_AI_BLURB}${bioLine}\n\nWould you be open to a quick 15-minute call sometime in the next couple weeks? I'd love to hear about your experience and how you got where you are.\n\nBest,\n${you}\nConnect.AI, University of Connecticut`;
 
   return {subject, body};
 }
 
+// Only rebuilds the dropdown's option list — never touches the subject/body
+// fields on its own, since render() fires on every unrelated change (a
+// clap, someone else's edit) and would otherwise silently overwrite
+// whatever a person is mid-editing.
 function renderEmailTemplate(){
   const select = document.getElementById('emailContact');
-  const names = new Map();
-  allSuggestions.forEach(s => { if(!names.has(s.alum_name)) names.set(s.alum_name, s); });
-  allEntries.forEach(e => { if(!names.has(e.alum_name)) names.set(e.alum_name, {alum_name: e.alum_name, note: e.notes ? `Logged note — ${e.notes}` : ''}); });
+  emailContacts = new Map();
+  allSuggestions.forEach(s => { if(!emailContacts.has(s.alum_name)) emailContacts.set(s.alum_name, s); });
+  allEntries.forEach(e => { if(!emailContacts.has(e.alum_name)) emailContacts.set(e.alum_name, {alum_name: e.alum_name, note: e.notes ? `Logged note — ${e.notes}` : ''}); });
 
   const current = select.value;
   select.innerHTML = '<option value="">Choose a name…</option>' +
-    Array.from(names.keys()).sort().map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
-  if(names.has(current)) select.value = current;
+    Array.from(emailContacts.keys()).sort().map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(emailContacts.has(current)) select.value = current;
+}
 
-  const contact = names.get(select.value);
+document.getElementById('emailContact').addEventListener('change', () => {
+  const select = document.getElementById('emailContact');
+  const contact = emailContacts.get(select.value);
   if(!contact){
     document.getElementById('emailSubject').value = '';
     document.getElementById('emailBody').value = '';
@@ -559,9 +614,7 @@ function renderEmailTemplate(){
   const {subject, body} = buildEmailTemplate(contact);
   document.getElementById('emailSubject').value = subject;
   document.getElementById('emailBody').value = body;
-}
-
-document.getElementById('emailContact').addEventListener('change', renderEmailTemplate);
+});
 
 document.getElementById('copyEmailBtn').addEventListener('click', async () => {
   const subject = document.getElementById('emailSubject').value;
