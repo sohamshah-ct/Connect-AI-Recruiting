@@ -494,15 +494,21 @@ document.getElementById('logForm').addEventListener('submit', async (e) => {
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
 
+  const fileToUpload = document.getElementById('f-proof').files[0] || null;
   let proofUrl = null;
+  let uploadFailed = false;
   try{
-    if(supa && proofFile){
+    if(supa && fileToUpload){
       btn.textContent = 'Uploading proof…';
-      const ext = (proofFile.name.split('.').pop() || 'jpg').toLowerCase();
+      const ext = (fileToUpload.name.split('.').pop() || 'jpg').toLowerCase();
       const path = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-      const {error: upErr} = await supa.storage.from('proof').upload(path, proofFile);
-      if(upErr) throw upErr;
-      proofUrl = supa.storage.from('proof').getPublicUrl(path).data.publicUrl;
+      const {error: upErr} = await supa.storage.from('proof').upload(path, fileToUpload);
+      if(upErr){
+        console.error('proof upload failed', upErr);
+        uploadFailed = true;
+      } else {
+        proofUrl = supa.storage.from('proof').getPublicUrl(path).data.publicUrl;
+      }
     }
 
     const data = {
@@ -527,8 +533,10 @@ document.getElementById('logForm').addEventListener('submit', async (e) => {
     document.getElementById('proofPreview').style.display = 'none';
     proofFile = null;
     localStorage.setItem('outreach-you', you);
-    document.getElementById('formNote').textContent = 'Saved.';
-    setTimeout(()=>{ document.getElementById('formNote').textContent = 'Saves for the whole class to see.'; }, 1800);
+    document.getElementById('formNote').textContent = uploadFailed
+      ? 'Saved, but the screenshot failed to upload. Check the file (large images can time out) and try again.'
+      : 'Saved.';
+    setTimeout(()=>{ document.getElementById('formNote').textContent = 'Saves for the whole class to see.'; }, uploadFailed ? 5000 : 1800);
   } catch(err){
     console.error(err);
     document.getElementById('formNote').textContent = 'Could not save — try again.';
