@@ -269,7 +269,7 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
 <div class="lightbox" id="lightbox"><img id="lightboxImg" alt="Proof of contact"></div>
 
 <script src="config.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.45.4/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 const STATUSES = [
   {key:'to-contact', label:'To contact', pill:'s-to-contact'},
@@ -559,12 +559,25 @@ async function init(){
       'Not connected to a database yet — add your Supabase URL and key in config.js. Showing local-only entries for now.';
     return;
   }
-  supa = window.supabase.createClient(url, key);
+  if(!window.supabase || !window.supabase.createClient){
+    document.getElementById('listStatus').textContent =
+      'Database library failed to load — check your connection and reload. Entries will not be saved until this loads.';
+    return;
+  }
+
+  try{
+    supa = window.supabase.createClient(url, key);
+  }catch(err){
+    console.error(err);
+    document.getElementById('listStatus').textContent = 'Could not connect to the database — check config.js keys.';
+    return;
+  }
 
   const {data, error} = await supa.from('entries').select('*').order('created_at', {ascending:false});
   if(error){
     console.error(error);
     document.getElementById('listStatus').textContent = 'Could not reach the database — check config.js keys.';
+    supa = null;
     return;
   }
   allEntries = data || [];
