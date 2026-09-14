@@ -226,12 +226,12 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
         </div>
         <div>
           <label for="f-notes">Notes</label>
-          <textarea id="f-notes" placeholder="What'd you talk about? Next step?"></textarea>
+          <textarea id="f-notes" required placeholder="What'd you talk about? Next step?"></textarea>
         </div>
         <div>
-          <label for="f-proof">Proof of contact (screenshot, optional)</label>
+          <label for="f-proof">Proof of contact (screenshot)</label>
           <div class="file-row">
-            <input id="f-proof" type="file" accept="image/*">
+            <input id="f-proof" type="file" accept="image/*" required>
             <img id="proofPreview" class="file-preview" alt="">
           </div>
         </div>
@@ -300,6 +300,7 @@ let activePerson = null;
 let searchTerm = '';
 let supa = null;
 let proofFile = null;
+let editingId = null;
 
 function esc(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -358,44 +359,7 @@ function renderEntries(){
     el.innerHTML = '<div class="empty-state">Nothing here yet. Log your first contact on the left.</div>';
     return;
   }
-  el.innerHTML = list.map(e => {
-    const st = statusMap[e.status] || statusMap['to-contact'];
-    const date = e.created_at ? new Date(e.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'}) : '';
-    const visitLine = (e.status === 'visit' && e.visit_date)
-      ? `<div class="entry-meta">Visiting ${esc(new Date(e.visit_date+'T00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}))}</div>` : '';
-    const reactions = e.reactions || {};
-    const proofHtml = e.proof_url
-      ? `<img class="proof-thumb proof-open" data-src="${esc(e.proof_url)}" src="${esc(e.proof_url)}" alt="Proof of contact with ${esc(e.alum_name)}">`
-      : `<div class="proof-empty">No proof attached</div>`;
-    return `
-    <div class="entry" data-id="${esc(e.id)}">
-      ${proofHtml}
-      <div class="entry-main">
-        <div class="entry-top">
-          <div>
-            <div class="entry-name">${esc(e.alum_name)}</div>
-            <div class="entry-meta">logged by ${esc(e.logged_by)} · ${esc(e.method||'—')} · ${date}</div>
-          </div>
-          <span class="pill ${st.pill}">${esc(st.label)}</span>
-        </div>
-        ${e.notes ? `<div class="entry-notes">${esc(e.notes)}</div>` : ''}
-        ${visitLine}
-        <div class="entry-bottom">
-          <div class="entry-controls">
-            <select class="status-select" data-id="${esc(e.id)}">
-              ${STATUSES.map(s=>`<option value="${s.key}" ${s.key===e.status?'selected':''}>${esc(s.label)}</option>`).join('')}
-            </select>
-          </div>
-          <div class="reactions">
-            ${REACTIONS.map(r => `
-              <button class="react-btn" data-id="${esc(e.id)}" data-emoji="${r}" type="button">
-                ${r} <span class="cnt">${reactions[r]||0}</span>
-              </button>`).join('')}
-          </div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  el.innerHTML = list.map(e => e.id === editingId ? renderEditCard(e) : renderViewCard(e)).join('');
 
   el.querySelectorAll('.status-select').forEach(sel => {
     sel.addEventListener('change', async () => {
@@ -426,6 +390,147 @@ function renderEntries(){
   el.querySelectorAll('.proof-open').forEach(img => {
     img.addEventListener('click', () => openLightbox(img.dataset.src));
   });
+  el.querySelectorAll('.edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => { editingId = btn.dataset.id; render(); });
+  });
+  el.querySelectorAll('.cancel-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => { editingId = null; render(); });
+  });
+  el.querySelectorAll('.edit-proof-input').forEach(input => {
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      const preview = input.closest('.entry').querySelector('.edit-proof-preview');
+      if(file && preview){ preview.src = URL.createObjectURL(file); preview.style.display = 'block'; }
+    });
+  });
+  el.querySelectorAll('.edit-form').forEach(form => {
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const id = form.dataset.id;
+      const e = allEntries.find(x=>x.id===id);
+      if(!e) return;
+      const newAlum = form.querySelector('.edit-alum').value.trim();
+      const newNotes = form.querySelector('.edit-notes').value.trim();
+      const newMethod = form.querySelector('.edit-method').value;
+      const newVisitDate = form.querySelector('.edit-visitdate').value;
+      const fileInput = form.querySelector('.edit-proof-input');
+      const newFile = fileInput.files[0] || null;
+      if(!newAlum || !newNotes) return;
+
+      const saveBtn = form.querySelector('.save-edit-btn');
+      saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+
+      try{
+        let proofUrl = e.proof_url;
+        if(newFile){
+          if(supa){
+            const ext = (newFile.name.split('.').pop() || 'jpg').toLowerCase();
+            const path = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+            const {error: upErr} = await supa.storage.from('proof').upload(path, newFile);
+            if(upErr) throw upErr;
+            proofUrl = supa.storage.from('proof').getPublicUrl(path).data.publicUrl;
+          } else {
+            proofUrl = URL.createObjectURL(newFile);
+          }
+        }
+        const patch = {
+          alum_name: newAlum, notes: newNotes, method: newMethod,
+          visit_date: newVisitDate || null, proof_url: proofUrl,
+          updated_at: new Date().toISOString(),
+        };
+        if(supa){
+          const {error} = await supa.from('entries').update(patch).eq('id', id);
+          if(error) throw error;
+        }
+        Object.assign(e, patch);
+        editingId = null;
+        render();
+      } catch(err){
+        console.error(err);
+        saveBtn.disabled = false; saveBtn.textContent = 'Save changes';
+        alert('Could not save changes — try again.');
+      }
+    });
+  });
+}
+
+function renderViewCard(e){
+  const st = statusMap[e.status] || statusMap['to-contact'];
+  const date = e.created_at ? new Date(e.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'}) : '';
+  const visitLine = (e.status === 'visit' && e.visit_date)
+    ? `<div class="entry-meta">Visiting ${esc(new Date(e.visit_date+'T00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}))}</div>` : '';
+  const reactions = e.reactions || {};
+  const proofHtml = e.proof_url
+    ? `<img class="proof-thumb proof-open" data-src="${esc(e.proof_url)}" src="${esc(e.proof_url)}" alt="Proof of contact with ${esc(e.alum_name)}">`
+    : `<div class="proof-empty">No proof attached</div>`;
+  return `
+  <div class="entry" data-id="${esc(e.id)}">
+    ${proofHtml}
+    <div class="entry-main">
+      <div class="entry-top">
+        <div>
+          <div class="entry-name">${esc(e.alum_name)}</div>
+          <div class="entry-meta">logged by ${esc(e.logged_by)} · ${esc(e.method||'—')} · ${date}</div>
+        </div>
+        <span class="pill ${st.pill}">${esc(st.label)}</span>
+      </div>
+      ${e.notes ? `<div class="entry-notes">${esc(e.notes)}</div>` : `<div class="entry-notes" style="opacity:.6;">No description yet.</div>`}
+      ${visitLine}
+      <div class="entry-bottom">
+        <div class="entry-controls">
+          <select class="status-select" data-id="${esc(e.id)}">
+            ${STATUSES.map(s=>`<option value="${s.key}" ${s.key===e.status?'selected':''}>${esc(s.label)}</option>`).join('')}
+          </select>
+          <button class="icon-btn edit-btn" data-id="${esc(e.id)}" type="button">Edit</button>
+        </div>
+        <div class="reactions">
+          ${REACTIONS.map(r => `
+            <button class="react-btn" data-id="${esc(e.id)}" data-emoji="${r}" type="button">
+              ${r} <span class="cnt">${reactions[r]||0}</span>
+            </button>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderEditCard(e){
+  return `
+  <div class="entry" data-id="${esc(e.id)}">
+    <form class="edit-form" data-id="${esc(e.id)}" style="flex:1; display:flex; flex-direction:column; gap:10px;">
+      <div class="row2">
+        <div>
+          <label>Alumni / contact name</label>
+          <input class="edit-alum" required value="${esc(e.alum_name)}">
+        </div>
+        <div>
+          <label>Method</label>
+          <select class="edit-method">
+            ${['LinkedIn','Email','Phone','In person','Text'].map(m => `<option ${m===e.method?'selected':''}>${m}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label>Visit date</label>
+        <input class="edit-visitdate" type="date" value="${esc(e.visit_date||'')}">
+      </div>
+      <div>
+        <label>Notes</label>
+        <textarea class="edit-notes" required>${esc(e.notes||'')}</textarea>
+      </div>
+      <div>
+        <label>Proof of contact</label>
+        <div class="file-row">
+          <input class="edit-proof-input" type="file" accept="image/*">
+          <img class="file-preview edit-proof-preview" style="${e.proof_url?'display:block;':''}" src="${esc(e.proof_url||'')}" alt="">
+        </div>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="primary save-edit-btn" type="submit" style="margin-top:0;">Save changes</button>
+        <button class="icon-btn cancel-edit-btn" type="button">Cancel</button>
+      </div>
+    </form>
+  </div>`;
 }
 
 function renderLeaderboard(){
@@ -489,26 +594,23 @@ document.getElementById('logForm').addEventListener('submit', async (e) => {
   const method = document.getElementById('f-method').value;
   const visitDate = document.getElementById('f-visitdate').value;
   const notes = document.getElementById('f-notes').value.trim();
-  if(!you || !alum) return;
+  const fileToUpload = document.getElementById('f-proof').files[0] || null;
+  if(!you || !alum || !notes || !fileToUpload) return;
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
 
-  const fileToUpload = document.getElementById('f-proof').files[0] || null;
   let proofUrl = null;
-  let uploadFailed = false;
   try{
-    if(supa && fileToUpload){
+    if(supa){
       btn.textContent = 'Uploading proof…';
       const ext = (fileToUpload.name.split('.').pop() || 'jpg').toLowerCase();
       const path = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
       const {error: upErr} = await supa.storage.from('proof').upload(path, fileToUpload);
-      if(upErr){
-        console.error('proof upload failed', upErr);
-        uploadFailed = true;
-      } else {
-        proofUrl = supa.storage.from('proof').getPublicUrl(path).data.publicUrl;
-      }
+      if(upErr) throw upErr;
+      proofUrl = supa.storage.from('proof').getPublicUrl(path).data.publicUrl;
+    } else {
+      proofUrl = URL.createObjectURL(fileToUpload);
     }
 
     const data = {
@@ -533,13 +635,11 @@ document.getElementById('logForm').addEventListener('submit', async (e) => {
     document.getElementById('proofPreview').style.display = 'none';
     proofFile = null;
     localStorage.setItem('outreach-you', you);
-    document.getElementById('formNote').textContent = uploadFailed
-      ? 'Saved, but the screenshot failed to upload. Check the file (large images can time out) and try again.'
-      : 'Saved.';
-    setTimeout(()=>{ document.getElementById('formNote').textContent = 'Saves for the whole class to see.'; }, uploadFailed ? 5000 : 1800);
+    document.getElementById('formNote').textContent = 'Saved.';
+    setTimeout(()=>{ document.getElementById('formNote').textContent = 'Saves for the whole class to see.'; }, 1800);
   } catch(err){
     console.error(err);
-    document.getElementById('formNote').textContent = 'Could not save — try again.';
+    document.getElementById('formNote').textContent = 'Could not save — the screenshot failed to upload. Try again.';
   } finally {
     btn.disabled = false; btn.textContent = 'Add entry';
   }
