@@ -139,6 +139,27 @@ button.primary:disabled{opacity:.5; cursor:not-allowed;}
 .empty-state{padding:40px 18px; text-align:center; color:var(--text-muted); font-size:14px;}
 .status-msg{font-size:12.5px; color:var(--text-muted); padding:0 18px 14px;}
 
+/* ---------- suggestions ---------- */
+.suggestion-list{display:flex; flex-direction:column; gap:8px;}
+.suggestion-row{
+  display:flex; align-items:center; gap:10px; padding:9px 10px;
+  border:1px solid var(--border); border-radius:8px; background:var(--bg);
+}
+.suggestion-main{flex:1; min-width:0;}
+.suggestion-name{font-weight:600; font-size:13.5px;}
+.suggestion-meta{font-size:11.5px; color:var(--text-muted); margin-top:1px;}
+.suggestion-note{font-size:12.5px; color:var(--text-muted); margin-top:2px; font-style:italic;}
+.claim-btn{
+  background:var(--crimson); color:#fff; border:none; border-radius:7px; padding:6px 11px;
+  font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; flex-shrink:0;
+}
+.claim-btn:hover{filter:brightness(1.08);}
+.drop-suggestion-btn{
+  background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:15px;
+  padding:2px 4px; flex-shrink:0; line-height:1;
+}
+.drop-suggestion-btn:hover{color:var(--crit);}
+
 /* ---------- leaderboard (bottom) ---------- */
 .leaderboard{background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow);}
 .leader-grid{display:flex; flex-direction:column; padding:4px 18px 18px;}
@@ -189,6 +210,30 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
 <div class="stats" id="stats"></div>
 
 <div class="layout">
+  <div style="display:flex; flex-direction:column; gap:22px;">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Suggested contacts</h2>
+      <div class="sub">Know someone worth reaching out to? Drop their name in — anyone can claim it.</div>
+    </div>
+    <div class="panel-body">
+      <form id="suggestForm" style="display:flex; flex-direction:column; gap:10px;">
+        <div>
+          <label for="sg-name">Alumni name</label>
+          <input id="sg-name" required placeholder="e.g. Marcus Cole '19" autocomplete="off">
+        </div>
+        <div>
+          <label for="sg-note">Why them? (optional)</label>
+          <input id="sg-note" placeholder="e.g. Works in AI at a startup">
+        </div>
+        <button class="primary" type="submit" id="suggestBtn" style="margin-top:0;">Add suggestion</button>
+      </form>
+      <div class="suggestion-list" id="suggestionList" style="margin-top:14px;">
+        <div class="leader-empty">No suggestions yet — add one above.</div>
+      </div>
+    </div>
+  </div>
+
   <div class="panel">
     <div class="panel-head">
       <h2>Log outreach</h2>
@@ -247,6 +292,7 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
       </form>
     </div>
   </div>
+  </div>
 
   <div class="panel">
     <div class="panel-head" style="border-bottom:none; padding-bottom:0;">
@@ -302,6 +348,7 @@ document.getElementById('weekBadge').textContent =
   'Week of ' + weekStart.toLocaleDateString(undefined,{month:'short', day:'numeric'});
 
 let allEntries = [];
+let allSuggestions = [];
 let activeFilter = 'all';
 let activePerson = null;
 let searchTerm = '';
@@ -318,7 +365,81 @@ function render(){
   renderTabs();
   renderEntries();
   renderLeaderboard();
+  renderSuggestions();
 }
+
+function renderSuggestions(){
+  const el = document.getElementById('suggestionList');
+  if(!allSuggestions.length){
+    el.innerHTML = '<div class="leader-empty">No suggestions yet — add one above.</div>';
+    return;
+  }
+  const list = allSuggestions.slice().sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+  el.innerHTML = list.map(s => `
+    <div class="suggestion-row" data-id="${esc(s.id)}">
+      <div class="suggestion-main">
+        <div class="suggestion-name">${esc(s.alum_name)}</div>
+        <div class="suggestion-meta">suggested by ${esc(s.suggested_by)}</div>
+        ${s.note ? `<div class="suggestion-note">${esc(s.note)}</div>` : ''}
+      </div>
+      <button class="claim-btn" data-id="${esc(s.id)}" data-name="${esc(s.alum_name)}" type="button">I'll reach out</button>
+      <button class="drop-suggestion-btn" data-id="${esc(s.id)}" type="button" title="Remove suggestion" aria-label="Remove suggestion">×</button>
+    </div>
+  `).join('');
+
+  el.querySelectorAll('.claim-btn').forEach(btn => {
+    btn.addEventListener('click', () => claimSuggestion(btn.dataset.id, btn.dataset.name));
+  });
+  el.querySelectorAll('.drop-suggestion-btn').forEach(btn => {
+    btn.addEventListener('click', () => removeSuggestion(btn.dataset.id));
+  });
+}
+
+async function claimSuggestion(id, name){
+  document.getElementById('f-alum').value = name;
+  document.getElementById('f-alum').scrollIntoView({behavior:'smooth', block:'center'});
+  document.getElementById('f-alum').focus();
+  await removeSuggestion(id);
+}
+
+async function removeSuggestion(id){
+  allSuggestions = allSuggestions.filter(s => s.id !== id);
+  renderSuggestions();
+  if(supa){
+    const {error} = await supa.from('suggestions').delete().eq('id', id);
+    if(error) console.error(error);
+  }
+}
+
+document.getElementById('suggestForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('sg-name').value.trim();
+  const note = document.getElementById('sg-note').value.trim();
+  const you = document.getElementById('f-you').value.trim() || localStorage.getItem('outreach-you') || 'Someone';
+  if(!name) return;
+
+  const btn = document.getElementById('suggestBtn');
+  btn.disabled = true; btn.textContent = 'Adding…';
+
+  const data = {alum_name: name, note: note || null, suggested_by: you};
+  try{
+    if(supa){
+      const {data: inserted, error} = await supa.from('suggestions').insert(data).select().single();
+      if(error) throw error;
+      allSuggestions.unshift(inserted);
+    } else {
+      allSuggestions.unshift({id:'local-'+Date.now(), created_at:new Date().toISOString(), ...data});
+    }
+    renderSuggestions();
+    document.getElementById('sg-name').value = '';
+    document.getElementById('sg-note').value = '';
+  } catch(err){
+    console.error(err);
+    alert('Could not add suggestion — try again.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Add suggestion';
+  }
+});
 
 function renderStats(){
   const total = allEntries.length;
@@ -707,6 +828,11 @@ async function init(){
     return;
   }
   allEntries = data || [];
+
+  const {data: sgData, error: sgError} = await supa.from('suggestions').select('*').order('created_at', {ascending:false});
+  if(sgError) console.error(sgError);
+  allSuggestions = sgData || [];
+
   render();
 
   supa.channel('entries-changes')
@@ -720,6 +846,17 @@ async function init(){
         allEntries = allEntries.filter(e=>e.id!==payload.old.id);
       }
       render();
+    })
+    .subscribe();
+
+  supa.channel('suggestions-changes')
+    .on('postgres_changes', {event:'*', schema:'public', table:'suggestions'}, payload => {
+      if(payload.eventType === 'INSERT'){
+        if(!allSuggestions.find(s=>s.id===payload.new.id)) allSuggestions.unshift(payload.new);
+      } else if(payload.eventType === 'DELETE'){
+        allSuggestions = allSuggestions.filter(s=>s.id!==payload.old.id);
+      }
+      renderSuggestions();
     })
     .subscribe();
 }
