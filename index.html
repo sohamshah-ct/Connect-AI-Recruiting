@@ -109,6 +109,11 @@ button.primary:disabled{opacity:.5; cursor:not-allowed;}
 .entry-main{flex:1; display:flex; flex-direction:column; gap:8px; min-width:0;}
 .entry-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;}
 .entry-name{font-family:"Fraunces", serif; font-size:16.5px; font-weight:500;}
+.lookup-links{display:inline-flex; gap:8px; margin-left:8px; vertical-align:middle;}
+.lookup-links a{font-family:"IBM Plex Sans", sans-serif; font-size:11px; font-weight:600; text-transform:uppercase;
+  letter-spacing:.03em; color:var(--text-muted); background:var(--surface-2); border:1px solid var(--border);
+  border-radius:99px; padding:2px 9px; text-decoration:none;}
+.lookup-links a:hover{color:var(--accent); border-color:var(--accent);}
 .entry-meta{font-size:12px; color:var(--text-muted); font-family:"IBM Plex Mono", monospace;}
 .pill{font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:99px; white-space:nowrap;}
 .pill.s-to-contact{background:var(--info-soft); color:var(--info);}
@@ -463,13 +468,20 @@ function renderViewCard(e){
   const proofHtml = e.proof_url
     ? `<img class="proof-thumb proof-open" data-src="${esc(e.proof_url)}" src="${esc(e.proof_url)}" alt="Proof of contact with ${esc(e.alum_name)}">`
     : `<div class="proof-empty">No proof attached</div>`;
+  const q = encodeURIComponent(`"${e.alum_name}" UConn`);
+  const qLinkedIn = encodeURIComponent(`${e.alum_name} UConn`);
+  const lookupHtml = `
+    <span class="lookup-links">
+      <a href="https://www.google.com/search?q=${q}" target="_blank" rel="noopener">Google</a>
+      <a href="https://www.linkedin.com/search/results/all/?keywords=${qLinkedIn}" target="_blank" rel="noopener">LinkedIn</a>
+    </span>`;
   return `
   <div class="entry" data-id="${esc(e.id)}">
     ${proofHtml}
     <div class="entry-main">
       <div class="entry-top">
         <div>
-          <div class="entry-name">${esc(e.alum_name)}</div>
+          <div class="entry-name">${esc(e.alum_name)} ${lookupHtml}</div>
           <div class="entry-meta">logged by ${esc(e.logged_by)} · ${esc(e.method||'—')} · ${date}</div>
         </div>
         <span class="pill ${st.pill}">${esc(st.label)}</span>
