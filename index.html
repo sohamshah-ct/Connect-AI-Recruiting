@@ -193,6 +193,8 @@ button.primary:disabled{opacity:.5; cursor:not-allowed;}
 
 /* ---------- tools panel (tabbed) ---------- */
 .tool-section[hidden]{display:none;}
+.lookup-row{display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap;}
+.lookup-row .form-note{margin-top:0;}
 .tool-grid{display:grid; grid-template-columns:340px 1fr; gap:22px; align-items:start;}
 @media (max-width:820px){ .tool-grid{grid-template-columns:1fr;} }
 
@@ -264,6 +266,85 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
 </p>
 
 <div class="stats" id="stats"></div>
+
+<div class="panel">
+  <div class="panel-head" style="border-bottom:none; padding-bottom:0;">
+    <h2>Tools</h2>
+    <div class="sub">Suggestions, auto-discovery, and email drafts.</div>
+  </div>
+  <div class="tabs" id="toolTabs"></div>
+
+  <div class="panel-body">
+    <div class="tool-section" data-tool="suggestions">
+      <div class="tool-grid">
+        <div>
+          <form id="suggestForm" style="display:flex; flex-direction:column; gap:10px;">
+            <div>
+              <label for="sg-name">Alumni name</label>
+              <input id="sg-name" required placeholder="e.g. Marcus Cole '19" autocomplete="off">
+            </div>
+            <div>
+              <label for="sg-note">Why them? (optional)</label>
+              <input id="sg-note" placeholder="e.g. Works in AI at a startup">
+            </div>
+            <button class="primary" type="submit" id="suggestBtn" style="margin-top:0;">Add suggestion</button>
+          </form>
+        </div>
+        <div class="suggestion-list" id="suggestionList">
+          <div class="leader-empty">No suggestions yet — add one on the left.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-section" data-tool="autofound" hidden>
+      <div class="auto-found-grid" id="autoFoundGrid">
+        <div class="leader-empty">Nothing found yet — add a source in the Auto-discovery tab.</div>
+      </div>
+    </div>
+
+    <div class="tool-section" data-tool="discovery" hidden>
+      <div class="tool-grid">
+        <div>
+          <div class="source-label">Search queries</div>
+          <form id="addQueryForm" class="source-add-row">
+            <input id="new-query" placeholder="e.g. computer science alumni AI startup" autocomplete="off">
+            <button class="icon-btn" type="submit">Add</button>
+          </form>
+          <div class="source-list" id="queryList"></div>
+        </div>
+        <div>
+          <div class="source-label">Pages watched</div>
+          <form id="addPageForm" class="source-add-row">
+            <input id="new-page" placeholder="https://…" autocomplete="off">
+            <button class="icon-btn" type="submit">Add</button>
+          </form>
+          <div class="source-list" id="pageList"></div>
+        </div>
+      </div>
+      <button class="primary" type="button" id="runNowBtn">Run auto-discovery now</button>
+      <div class="form-note" id="runNowNote"></div>
+    </div>
+
+    <div class="tool-section" data-tool="email" hidden>
+      <div style="max-width:520px;">
+        <label for="emailContact">Contact</label>
+        <select id="emailContact">
+          <option value="">Choose a name…</option>
+        </select>
+        <div class="lookup-row">
+          <button class="icon-btn" type="button" id="lookupInfoBtn" disabled>🔍 Look up info about them</button>
+          <span class="form-note" id="lookupNote"></span>
+        </div>
+        <label for="emailSubject" style="margin-top:12px;">Subject</label>
+        <input id="emailSubject">
+        <label for="emailBody" style="margin-top:12px;">Body</label>
+        <textarea id="emailBody" style="min-height:220px; font-family:'IBM Plex Sans',sans-serif; line-height:1.5;"></textarea>
+        <button class="primary" type="button" id="copyEmailBtn">Copy to clipboard</button>
+        <div class="form-note" id="emailNote">This is a starting point — read it over before sending.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="layout">
   <div class="panel">
@@ -346,81 +427,6 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
     <div class="sub">Click a name to filter the list above to just their entries</div>
   </div>
   <div class="leader-grid" id="leaderGrid"><div class="leader-empty">No entries yet — be the first.</div></div>
-</div>
-
-<div class="panel">
-  <div class="panel-head" style="border-bottom:none; padding-bottom:0;">
-    <h2>Tools</h2>
-    <div class="sub">Suggestions, auto-discovery, and email drafts.</div>
-  </div>
-  <div class="tabs" id="toolTabs"></div>
-
-  <div class="panel-body">
-    <div class="tool-section" data-tool="suggestions">
-      <div class="tool-grid">
-        <div>
-          <form id="suggestForm" style="display:flex; flex-direction:column; gap:10px;">
-            <div>
-              <label for="sg-name">Alumni name</label>
-              <input id="sg-name" required placeholder="e.g. Marcus Cole '19" autocomplete="off">
-            </div>
-            <div>
-              <label for="sg-note">Why them? (optional)</label>
-              <input id="sg-note" placeholder="e.g. Works in AI at a startup">
-            </div>
-            <button class="primary" type="submit" id="suggestBtn" style="margin-top:0;">Add suggestion</button>
-          </form>
-        </div>
-        <div class="suggestion-list" id="suggestionList">
-          <div class="leader-empty">No suggestions yet — add one on the left.</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="tool-section" data-tool="autofound" hidden>
-      <div class="auto-found-grid" id="autoFoundGrid">
-        <div class="leader-empty">Nothing found yet — add a source in the Auto-discovery tab.</div>
-      </div>
-    </div>
-
-    <div class="tool-section" data-tool="discovery" hidden>
-      <div class="tool-grid">
-        <div>
-          <div class="source-label">Search queries</div>
-          <form id="addQueryForm" class="source-add-row">
-            <input id="new-query" placeholder="e.g. computer science alumni AI startup" autocomplete="off">
-            <button class="icon-btn" type="submit">Add</button>
-          </form>
-          <div class="source-list" id="queryList"></div>
-        </div>
-        <div>
-          <div class="source-label">Pages watched</div>
-          <form id="addPageForm" class="source-add-row">
-            <input id="new-page" placeholder="https://…" autocomplete="off">
-            <button class="icon-btn" type="submit">Add</button>
-          </form>
-          <div class="source-list" id="pageList"></div>
-        </div>
-      </div>
-      <button class="primary" type="button" id="runNowBtn">Run auto-discovery now</button>
-      <div class="form-note" id="runNowNote"></div>
-    </div>
-
-    <div class="tool-section" data-tool="email" hidden>
-      <div style="max-width:520px;">
-        <label for="emailContact">Contact</label>
-        <select id="emailContact">
-          <option value="">Choose a name…</option>
-        </select>
-        <label for="emailSubject" style="margin-top:12px;">Subject</label>
-        <input id="emailSubject">
-        <label for="emailBody" style="margin-top:12px;">Body</label>
-        <textarea id="emailBody" style="min-height:220px; font-family:'IBM Plex Sans',sans-serif; line-height:1.5;"></textarea>
-        <button class="primary" type="button" id="copyEmailBtn">Copy to clipboard</button>
-        <div class="form-note" id="emailNote">Auto-found details can be rough — read it over and edit before sending.</div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <footer>Connect.AI · Alumni Outreach Tracker · shared live with everyone who opens this link</footer>
@@ -555,40 +561,19 @@ function renderAutoFound(){
 
 const CONNECT_AI_BLURB = "I'm a current student in UConn's Connect.AI program — a course where students work as a forward-deployed engineering team. We spend the first half of the semester learning AI engineering and consulting fundamentals, then the second half embedded with a real partner business, scoping, building, and shipping something that actually runs.";
 
-function stripNotePrefix(note){
-  return splitNote(note).bio;
-}
-
-// Cut a scraped bio down to one clean clause instead of dumping the raw
-// (often garbled, mid-sentence) scraped text — and never long enough to
-// look like finished, ready-to-send prose.
-function shortBioClause(bio){
-  if(!bio) return '';
-  let clause = bio.split(/[.;]\s|\s—\s/)[0].trim();
-  const CAP = 90;
-  if(clause.length > CAP){
-    clause = clause.slice(0, CAP);
-    const lastSpace = clause.lastIndexOf(' ');
-    if(lastSpace > 40) clause = clause.slice(0, lastSpace);
-    clause += '…';
-  }
-  return clause;
-}
-
 let emailContacts = new Map();
 
-function buildEmailTemplate(contact){
+// bio is optional and only ever comes from an explicit "Look up info"
+// click — never auto-inserted from a stale scraped note, so the draft
+// never silently contains stray auto-found text someone forgot to check.
+function buildEmailTemplate(contact, bio){
   const you = document.getElementById('f-you').value.trim() || localStorage.getItem('outreach-you') || '[Your name]';
   const firstName = (contact.alum_name || '').split(' ')[0];
-  const bio = shortBioClause(stripNotePrefix(contact.note));
 
   const subject = `UConn Connect.AI — quick hello from a current student`;
-  // Bracketed on purpose: auto-found details can be wrong or garbled, so
-  // this should always read as a placeholder to check, never as
-  // finished text someone could copy-paste without looking at it.
   const bioLine = bio
-    ? `\n\n[Double-check before sending: I saw a note that you may be connected to "${bio}" — worth a line about that if it's accurate.]`
-    : `\n\n[Add a line here about anything you know about their background.]`;
+    ? `\n\n[Double-check before sending: found this about them — "${bio}" — worth a line about it if it's accurate.]`
+    : `\n\n[Add a line here about anything you know about their background — or click "Look up info" above.]`;
   const body = `Hi ${firstName},\n\nMy name is ${you}. ${CONNECT_AI_BLURB}${bioLine}\n\nWould you be open to a quick 15-minute call sometime in the next couple weeks? I'd love to hear about your experience and how you got where you are.\n\nBest,\n${you}\nConnect.AI, University of Connecticut`;
 
   return {subject, body};
@@ -602,7 +587,7 @@ function renderEmailTemplate(){
   const select = document.getElementById('emailContact');
   emailContacts = new Map();
   allSuggestions.forEach(s => { if(!emailContacts.has(s.alum_name)) emailContacts.set(s.alum_name, s); });
-  allEntries.forEach(e => { if(!emailContacts.has(e.alum_name)) emailContacts.set(e.alum_name, {alum_name: e.alum_name, note: e.notes ? `Logged note — ${e.notes}` : ''}); });
+  allEntries.forEach(e => { if(!emailContacts.has(e.alum_name)) emailContacts.set(e.alum_name, {alum_name: e.alum_name, note: ''}); });
 
   const current = select.value;
   select.innerHTML = '<option value="">Choose a name…</option>' +
@@ -613,14 +598,45 @@ function renderEmailTemplate(){
 document.getElementById('emailContact').addEventListener('change', () => {
   const select = document.getElementById('emailContact');
   const contact = emailContacts.get(select.value);
+  const lookupBtn = document.getElementById('lookupInfoBtn');
+  document.getElementById('lookupNote').textContent = '';
   if(!contact){
     document.getElementById('emailSubject').value = '';
     document.getElementById('emailBody').value = '';
+    lookupBtn.disabled = true;
     return;
   }
-  const {subject, body} = buildEmailTemplate(contact);
+  lookupBtn.disabled = false;
+  const {subject, body} = buildEmailTemplate(contact, '');
   document.getElementById('emailSubject').value = subject;
   document.getElementById('emailBody').value = body;
+});
+
+document.getElementById('lookupInfoBtn').addEventListener('click', async () => {
+  const select = document.getElementById('emailContact');
+  const contact = emailContacts.get(select.value);
+  const lookupNote = document.getElementById('lookupNote');
+  const btn = document.getElementById('lookupInfoBtn');
+  if(!contact) return;
+
+  btn.disabled = true; lookupNote.textContent = 'Looking up…';
+  try{
+    const resp = await fetch('/api/lookup?name=' + encodeURIComponent(contact.alum_name));
+    const data = await resp.json();
+    if(data.ok && data.bio){
+      const {subject, body} = buildEmailTemplate(contact, data.bio);
+      document.getElementById('emailSubject').value = subject;
+      document.getElementById('emailBody').value = body;
+      lookupNote.textContent = data.source ? `Found via ${data.source}` : 'Found something — check it below.';
+    } else {
+      lookupNote.textContent = data.message || 'Nothing useful turned up.';
+    }
+  } catch(err){
+    console.error(err);
+    lookupNote.textContent = 'Lookup failed — try again.';
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 document.getElementById('copyEmailBtn').addEventListener('click', async () => {
