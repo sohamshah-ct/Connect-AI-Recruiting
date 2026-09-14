@@ -14,7 +14,7 @@ A shared tracker for Connect.AI's alumni outreach. Everyone in the class logs th
 - A shared "Suggested contacts" queue — drop in a name worth reaching out to, anyone can claim it.
 - Two daily auto-discovery jobs (free Vercel crons) that feed the suggestions queue automatically:
   - **Page scan** (`api/scrape.js`) — checks specific pages you point it at (a department's "notable alumni" page, a spotlight listing) for names.
-  - **Search-based discovery** (`api/search.js`) — runs search queries you configure through Google's Custom Search API (free, 100 queries/day) and pulls candidate names out of the results — including what's publicly indexed about LinkedIn profiles, without scraping LinkedIn directly (which blocks scrapers and disallows it in their terms).
+  - **Search-based discovery** (`api/search.js`) — runs search queries you configure through Google's Custom Search API (free, 100 queries/day) scoped to `*.uconn.edu` and `*.linkedin.com`, and pulls candidate names out of the results — including what's publicly indexed about LinkedIn profiles, without scraping LinkedIn directly (which blocks scrapers and disallows it in their terms).
   
   Both are heuristics, not verified facts — treat anything they surface as a lead to glance at and claim or dismiss, same as a suggestion a person typed in by hand.
 - Everything's shared and updates live across everyone who has the page open.
@@ -31,7 +31,7 @@ Trigger it immediately by opening `/api/scrape` in a browser, or wait for the da
 **Search-based discovery** — needs a free Google Custom Search setup (~10 min, no payment info required):
 1. Go to [console.cloud.google.com](https://console.cloud.google.com), create a project (or use an existing one), and enable the **Custom Search API** under APIs & Services.
 2. Create an API key under APIs & Services → Credentials. This is `GOOGLE_SEARCH_API_KEY`.
-3. Go to [programmablesearchengine.google.com](https://programmablesearchengine.google.com), create a new search engine, set it to **search the entire web**. Copy its **Search engine ID** — this is `GOOGLE_SEARCH_CX`.
+3. Go to [programmablesearchengine.google.com](https://programmablesearchengine.google.com), create a new search engine. Google retired "search the entire web" for new engines in Jan 2026 — new engines instead search a list of up to 50 domains you specify. Add `*.uconn.edu` and `*.linkedin.com` under "Sites to search" (Setup → Basics on the engine's control panel). Copy its **Search engine ID** from that same page — this is `GOOGLE_SEARCH_CX`.
 4. In Vercel → Settings → Environment Variables, add both as Production variables, then redeploy.
 5. Add search queries to run in Supabase:
    ```sql

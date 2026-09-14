@@ -3,11 +3,14 @@
 // the `search_queries` table, pulls candidate names out of the result
 // titles/snippets, and drops new ones into the `suggestions` queue.
 //
-// This is how we get relevance-ranked, "search the whole web" style
-// discovery (LinkedIn included, since Google indexes public LinkedIn
-// profile pages) without scraping LinkedIn directly — LinkedIn blocks
-// scrapers and disallows it in their terms; reading what Google's public
-// index already shows about a public page is a different thing.
+// The Programmable Search Engine backing this is scoped to *.uconn.edu and
+// *.linkedin.com (Google retired open "search the entire web" for new
+// engines in Jan 2026 — new engines pick up to 50 domains instead). This
+// is how we get relevance-ranked discovery that includes what Google's
+// public index shows about LinkedIn profiles, without scraping LinkedIn
+// directly — LinkedIn blocks scrapers and disallows it in their terms;
+// reading their already-public, already-indexed pages is a different
+// thing.
 //
 // Heuristic-based, not perfect. Meant to surface leads for a human to
 // glance at and claim or dismiss, same as any other suggestion.
