@@ -1,0 +1,8 @@
+{
+  "name": "alumni-outreach-tracker",
+  "private": true,
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "cheerio": "^1.0.0"
+  }
+}

@@ -7,5 +7,8 @@
         { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
     }
+  ],
+  "crons": [
+    { "path": "/api/scrape", "schedule": "0 13 * * *" }
   ]
 }
