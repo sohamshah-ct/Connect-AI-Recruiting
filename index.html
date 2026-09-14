@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alumni Outreach Tracker · Connect.AI</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F6F4EE;
+  --surface:#FFFFFF;
+  --surface-2:#EFEBE0;
+  --text:#1C2430;
+  --text-muted:#646F63;
+  --border:#DCD6C6;
+  --navy:#000E2F;
+  --accent:#0F3D52;
+  --accent-soft:#DCE7E4;
+  --crimson:#E4002B;
+  --steel:#7B868C;
+  --ok:#2E6B45;
+  --ok-soft:#DCEAE0;
+  --warn:#96731A;
+  --warn-soft:#F1E6C8;
+  --info:#33628C;
+  --info-soft:#DEE7EF;
+  --crit:#9A4232;
+  --crit-soft:#F1DCD5;
+  --shadow: 0 1px 2px rgba(28,36,48,.06), 0 6px 20px -10px rgba(28,36,48,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1116; --surface:#161B22; --surface-2:#1C222B; --text:#EDEAE0; --text-muted:#9AA3AC;
+    --border:#2C3440; --navy:#0B1D3F; --accent:#7FB8C9; --accent-soft:#1E323A; --crimson:#FF5C7A; --steel:#9AA6AC;
+    --ok:#7FBE94; --ok-soft:#1E3327; --warn:#D9B65C; --warn-soft:#362D18; --info:#8FB4D6; --info-soft:#1E2C3A;
+    --crit:#DB8E7B; --crit-soft:#3A211C; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1116; --surface:#161B22; --surface-2:#1C222B; --text:#EDEAE0; --text-muted:#9AA3AC;
+  --border:#2C3440; --navy:#0B1D3F; --accent:#7FB8C9; --accent-soft:#1E323A; --crimson:#FF5C7A; --steel:#9AA6AC;
+  --ok:#7FBE94; --ok-soft:#1E3327; --warn:#D9B65C; --warn-soft:#362D18; --info:#8FB4D6; --info-soft:#1E2C3A;
+  --crit:#DB8E7B; --crit-soft:#3A211C; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -12px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box;}
+body{background:var(--bg); color:var(--text); font-family:"IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  margin:0; padding:28px 20px 60px; display:flex; flex-direction:column; gap:26px; max-width:1180px; margin-inline:auto;}
+h1,h2,h3{font-family:"Fraunces", Georgia, serif; text-wrap:balance; margin:0;}
+img{max-width:100%;}
+
+/* ---------- header / branding ---------- */
+header{display:flex; flex-wrap:wrap; gap:20px; justify-content:space-between; align-items:flex-end;
+  border-bottom:1px solid var(--border); padding-bottom:20px;}
+.brand{display:flex; align-items:center; gap:14px;}
+.brand svg{flex-shrink:0;}
+.masthead-eyebrow{font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px;}
+header h1{font-size:clamp(26px,4vw,36px); font-weight:500; color:var(--text); line-height:1.05;}
+header p{color:var(--text-muted); font-size:14.5px; max-width:52ch; margin-top:6px;}
+.week-badge{font-family:"IBM Plex Mono", monospace; font-size:12px; color:var(--accent); background:var(--accent-soft);
+  border:1px solid var(--border); border-radius:99px; padding:6px 14px; white-space:nowrap; height:fit-content;}
+
+/* ---------- stat row ---------- */
+.stats{display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:12px;}
+.stat{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 16px; box-shadow:var(--shadow);}
+.stat .n{font-family:"IBM Plex Mono", monospace; font-variant-numeric:tabular-nums; font-size:26px; font-weight:500;}
+.stat .l{font-size:12px; color:var(--text-muted); margin-top:2px;}
+
+/* ---------- layout ---------- */
+.layout{display:grid; grid-template-columns:340px 1fr; gap:22px; align-items:start;}
+@media (max-width:820px){ .layout{grid-template-columns:1fr;} }
+
+.panel{background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); overflow:hidden;}
+.panel-head{padding:16px 18px 12px; border-bottom:1px solid var(--border);}
+.panel-head h2{font-size:17px; font-weight:500;}
+.panel-head .sub{font-size:12.5px; color:var(--text-muted); margin-top:3px;}
+.panel-body{padding:16px 18px 18px;}
+
+/* ---------- form ---------- */
+form{display:flex; flex-direction:column; gap:12px;}
+label{font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; display:block; margin-bottom:5px;}
+input, select, textarea{width:100%; font-family:inherit; font-size:14px; color:var(--text); background:var(--bg);
+  border:1px solid var(--border); border-radius:7px; padding:9px 10px;}
+textarea{resize:vertical; min-height:56px;}
+input:focus, select:focus, textarea:focus, button:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+button.primary{background:var(--accent); color:var(--bg); border:none; border-radius:7px; padding:10px 14px;
+  font-size:14px; font-weight:600; cursor:pointer; margin-top:4px;}
+button.primary:hover{filter:brightness(1.08);}
+button.primary:disabled{opacity:.5; cursor:not-allowed;}
+.form-note{font-size:12px; color:var(--text-muted); margin-top:2px;}
+.file-row{display:flex; align-items:center; gap:10px;}
+.file-row input[type=file]{font-size:12.5px;}
+.file-preview{width:54px; height:54px; border-radius:8px; object-fit:cover; border:1px solid var(--border); display:none;}
+
+/* ---------- tabs / search ---------- */
+.tabs{display:flex; gap:6px; flex-wrap:wrap; padding:14px 18px 0;}
+.tab{font-size:12.5px; font-weight:600; padding:6px 12px; border-radius:99px; border:1px solid var(--border);
+  background:var(--surface-2); color:var(--text-muted); cursor:pointer;}
+.tab[aria-pressed="true"]{background:var(--accent); color:var(--bg); border-color:var(--accent);}
+.tab .cnt{font-family:"IBM Plex Mono",monospace; opacity:.8; margin-left:4px;}
+.search-row{display:flex; gap:8px; padding:12px 18px 0; align-items:center;}
+.search-row input{flex:1;}
+.clear-filter{font-size:12px; color:var(--accent); background:none; border:none; cursor:pointer; text-decoration:underline; white-space:nowrap; display:none;}
+
+/* ---------- entries ---------- */
+.entries{display:flex; flex-direction:column; gap:10px; padding:16px 18px 18px;}
+.entry{border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; gap:12px; background:var(--bg);}
+.entry-main{flex:1; display:flex; flex-direction:column; gap:8px; min-width:0;}
+.entry-top{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;}
+.entry-name{font-family:"Fraunces", serif; font-size:16.5px; font-weight:500;}
+.entry-meta{font-size:12px; color:var(--text-muted); font-family:"IBM Plex Mono", monospace;}
+.pill{font-size:11.5px; font-weight:600; padding:3px 9px; border-radius:99px; white-space:nowrap;}
+.pill.s-to-contact{background:var(--info-soft); color:var(--info);}
+.pill.s-awaiting{background:var(--warn-soft); color:var(--warn);}
+.pill.s-conversation{background:var(--accent-soft); color:var(--accent);}
+.pill.s-visit{background:var(--ok-soft); color:var(--ok);}
+.pill.s-complete{background:var(--ok-soft); color:var(--ok);}
+.pill.s-no-response{background:var(--crit-soft); color:var(--crit);}
+.entry-notes{font-size:13.5px; opacity:.9; line-height:1.4;}
+.entry-bottom{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;}
+.entry-controls{display:flex; gap:6px; align-items:center;}
+.entry-controls select{width:auto; font-size:12.5px; padding:5px 8px;}
+.reactions{display:flex; gap:6px; align-items:center;}
+.react-btn{background:var(--surface-2); border:1px solid var(--border); border-radius:99px; padding:4px 10px;
+  font-size:13px; cursor:pointer; display:flex; align-items:center; gap:5px; color:var(--text);}
+.react-btn:hover{border-color:var(--accent);}
+.react-btn .cnt{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--text-muted);}
+.proof-thumb{width:72px; height:72px; border-radius:8px; object-fit:cover; border:1px solid var(--border); flex-shrink:0; cursor:pointer; display:block;}
+.proof-empty{width:72px; height:72px; border-radius:8px; border:1px dashed var(--border); flex-shrink:0; display:flex;
+  align-items:center; justify-content:center; font-size:10.5px; color:var(--text-muted); text-align:center; padding:4px;}
+.empty-state{padding:40px 18px; text-align:center; color:var(--text-muted); font-size:14px;}
+.status-msg{font-size:12.5px; color:var(--text-muted); padding:0 18px 14px;}
+
+/* ---------- leaderboard (bottom) ---------- */
+.leaderboard{background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow);}
+.leader-grid{display:flex; flex-direction:column; padding:4px 18px 18px;}
+.leader-row{display:grid; grid-template-columns:28px 1fr 2fr 60px; align-items:center; gap:14px; padding:10px 4px;
+  border-bottom:1px dashed var(--border); background:none; border-left:none; border-right:none; border-top:none;
+  cursor:pointer; text-align:left; font-family:inherit; color:var(--text); font-size:14px;}
+.leader-row:last-child{border-bottom:none;}
+.leader-row:hover{background:var(--surface-2);}
+.leader-row.active{background:var(--accent-soft);}
+.leader-rank{font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--text-muted);}
+.leader-rank.top1{color:var(--crimson); font-weight:700;}
+.leader-name{font-weight:600;}
+.leader-bar-wrap{height:8px; background:var(--surface-2); border-radius:99px; overflow:hidden;}
+.leader-bar{height:100%; background:var(--crimson); border-radius:99px;}
+.leader-count{font-family:"IBM Plex Mono",monospace; font-variant-numeric:tabular-nums; font-size:14px; text-align:right;}
+.leader-empty{color:var(--text-muted); font-size:13.5px; padding:10px 4px;}
+
+/* ---------- lightbox ---------- */
+.lightbox{position:fixed; inset:0; background:rgba(0,0,0,.75); display:none; align-items:center; justify-content:center;
+  padding:30px; z-index:50; cursor:zoom-out;}
+.lightbox.open{display:flex;}
+.lightbox img{max-width:min(90vw, 700px); max-height:85vh; border-radius:10px; box-shadow:0 20px 60px rgba(0,0,0,.5);}
+
+footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg width="52" height="52" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M68 8 A42 42 0 1 0 68 92 L68 62 A12 12 0 1 1 68 38 Z" fill="var(--navy)"/>
+      <circle cx="75" cy="30" r="7" fill="var(--crimson)"/>
+      <circle cx="68" cy="70" r="16" fill="var(--steel)"/>
+    </svg>
+    <div>
+      <div class="masthead-eyebrow">Connect.AI · Alumni Relations</div>
+      <h1>Alumni Outreach Tracker</h1>
+    </div>
+  </div>
+  <div class="week-badge" id="weekBadge">Week of —</div>
+</header>
+<p style="color:var(--text-muted); font-size:14.5px; max-width:64ch; margin-top:-14px;">
+  Log every alumni conversation as it happens — who you reached, where things stand, and proof it actually happened.
+  Give it a clap when someone puts in the work.
+</p>
+
+<div class="stats" id="stats"></div>
+
+<div class="layout">
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Log outreach</h2>
+      <div class="sub">One entry per alumni contact — update it later as things progress.</div>
+    </div>
+    <div class="panel-body">
+      <form id="logForm">
+        <div>
+          <label for="f-you">Your name</label>
+          <input id="f-you" required placeholder="e.g. Priya Nair" autocomplete="off">
+        </div>
+        <div>
+          <label for="f-alum">Alumni / contact name</label>
+          <input id="f-alum" required placeholder="e.g. Marcus Cole '19" autocomplete="off">
+        </div>
+        <div class="row2">
+          <div>
+            <label for="f-status">Status</label>
+            <select id="f-status">
+              <option value="to-contact">To contact</option>
+              <option value="awaiting" selected>Contacted — awaiting reply</option>
+              <option value="conversation">In conversation</option>
+              <option value="visit">Visit scheduled</option>
+              <option value="complete">Visited / complete</option>
+              <option value="no-response">No response</option>
+            </select>
+          </div>
+          <div>
+            <label for="f-method">Method</label>
+            <select id="f-method">
+              <option>LinkedIn</option>
+              <option>Email</option>
+              <option>Phone</option>
+              <option>In person</option>
+              <option>Text</option>
+            </select>
+          </div>
+        </div>
+        <div id="visitDateWrap" style="display:none;">
+          <label for="f-visitdate">Visit date</label>
+          <input id="f-visitdate" type="date">
+        </div>
+        <div>
+          <label for="f-notes">Notes</label>
+          <textarea id="f-notes" placeholder="What'd you talk about? Next step?"></textarea>
+        </div>
+        <div>
+          <label for="f-proof">Proof of contact (screenshot, optional)</label>
+          <div class="file-row">
+            <input id="f-proof" type="file" accept="image/*">
+            <img id="proofPreview" class="file-preview" alt="">
+          </div>
+        </div>
+        <button class="primary" type="submit" id="submitBtn">Add entry</button>
+        <div class="form-note" id="formNote">Saves for the whole class to see.</div>
+      </form>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head" style="border-bottom:none; padding-bottom:0;">
+      <h2>All outreach</h2>
+      <div class="sub">Filter by status, search by name, or click a name on the leaderboard below</div>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div class="search-row">
+      <input id="searchBox" placeholder="Search alumni name or your classmate's name…">
+      <button class="clear-filter" id="clearFilter" type="button">Clear person filter ×</button>
+    </div>
+    <div class="status-msg" id="listStatus"></div>
+    <div class="entries" id="entries"></div>
+  </div>
+</div>
+
+<div class="leaderboard">
+  <div class="panel-head">
+    <h2>Leaderboard — who's contacted the most people</h2>
+    <div class="sub">Click a name to filter the list above to just their entries</div>
+  </div>
+  <div class="leader-grid" id="leaderGrid"><div class="leader-empty">No entries yet — be the first.</div></div>
+</div>
+
+<footer>Connect.AI · Alumni Outreach Tracker · shared live with everyone who opens this link</footer>
+
+<div class="lightbox" id="lightbox"><img id="lightboxImg" alt="Proof of contact"></div>
+
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.45.4/umd/supabase.min.js"></script>
+<script>
+const STATUSES = [
+  {key:'to-contact', label:'To contact', pill:'s-to-contact'},
+  {key:'awaiting', label:'Awaiting reply', pill:'s-awaiting'},
+  {key:'conversation', label:'In conversation', pill:'s-conversation'},
+  {key:'visit', label:'Visit scheduled', pill:'s-visit'},
+  {key:'complete', label:'Complete', pill:'s-complete'},
+  {key:'no-response', label:'No response', pill:'s-no-response'},
+];
+const statusMap = Object.fromEntries(STATUSES.map(s=>[s.key,s]));
+const REACTIONS = ['👏','🎉'];
+
+function startOfWeek(d){
+  const dt = new Date(d);
+  const day = dt.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  dt.setDate(dt.getDate()+diff);
+  dt.setHours(0,0,0,0);
+  return dt;
+}
+const weekStart = startOfWeek(new Date());
+document.getElementById('weekBadge').textContent =
+  'Week of ' + weekStart.toLocaleDateString(undefined,{month:'short', day:'numeric'});
+
+let allEntries = [];
+let activeFilter = 'all';
+let activePerson = null;
+let searchTerm = '';
+let supa = null;
+let proofFile = null;
+
+function esc(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function render(){
+  renderStats();
+  renderTabs();
+  renderEntries();
+  renderLeaderboard();
+}
+
+function renderStats(){
+  const total = allEntries.length;
+  const thisWeek = allEntries.filter(e => e.created_at && new Date(e.created_at) >= weekStart).length;
+  const awaiting = allEntries.filter(e => e.status === 'awaiting').length;
+  const visits = allEntries.filter(e => e.status === 'visit').length;
+  const loggers = new Set(allEntries.map(e => e.logged_by).filter(Boolean)).size;
+  const stats = [
+    {n: total, l:'Total contacts logged'},
+    {n: thisWeek, l:'Logged this week'},
+    {n: awaiting, l:'Awaiting reply'},
+    {n: visits, l:'Visits scheduled'},
+    {n: loggers, l:'Classmates contributing'},
+  ];
+  document.getElementById('stats').innerHTML = stats.map(s =>
+    `<div class="stat"><div class="n">${s.n}</div><div class="l">${esc(s.l)}</div></div>`
+  ).join('');
+}
+
+function renderTabs(){
+  const counts = { all: allEntries.length };
+  STATUSES.forEach(s => counts[s.key] = allEntries.filter(e=>e.status===s.key).length);
+  const tabs = [{key:'all', label:'All'}, ...STATUSES];
+  document.getElementById('tabs').innerHTML = tabs.map(t => `
+    <button class="tab" type="button" data-key="${t.key}" aria-pressed="${activeFilter===t.key}">
+      ${esc(t.label)} <span class="cnt">${counts[t.key]||0}</span>
+    </button>
+  `).join('');
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => { activeFilter = btn.dataset.key; render(); });
+  });
+  document.getElementById('clearFilter').style.display = activePerson ? 'inline' : 'none';
+}
+
+function renderEntries(){
+  let list = allEntries.slice().sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+  if(activeFilter !== 'all') list = list.filter(e => e.status === activeFilter);
+  if(activePerson) list = list.filter(e => e.logged_by === activePerson);
+  if(searchTerm){
+    const q = searchTerm.toLowerCase();
+    list = list.filter(e => (e.alum_name||'').toLowerCase().includes(q) || (e.logged_by||'').toLowerCase().includes(q));
+  }
+  const el = document.getElementById('entries');
+  if(!list.length){
+    el.innerHTML = '<div class="empty-state">Nothing here yet. Log your first contact on the left.</div>';
+    return;
+  }
+  el.innerHTML = list.map(e => {
+    const st = statusMap[e.status] || statusMap['to-contact'];
+    const date = e.created_at ? new Date(e.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'}) : '';
+    const visitLine = (e.status === 'visit' && e.visit_date)
+      ? `<div class="entry-meta">Visiting ${esc(new Date(e.visit_date+'T00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'}))}</div>` : '';
+    const reactions = e.reactions || {};
+    const proofHtml = e.proof_url
+      ? `<img class="proof-thumb proof-open" data-src="${esc(e.proof_url)}" src="${esc(e.proof_url)}" alt="Proof of contact with ${esc(e.alum_name)}">`
+      : `<div class="proof-empty">No proof attached</div>`;
+    return `
+    <div class="entry" data-id="${esc(e.id)}">
+      ${proofHtml}
+      <div class="entry-main">
+        <div class="entry-top">
+          <div>
+            <div class="entry-name">${esc(e.alum_name)}</div>
+            <div class="entry-meta">logged by ${esc(e.logged_by)} · ${esc(e.method||'—')} · ${date}</div>
+          </div>
+          <span class="pill ${st.pill}">${esc(st.label)}</span>
+        </div>
+        ${e.notes ? `<div class="entry-notes">${esc(e.notes)}</div>` : ''}
+        ${visitLine}
+        <div class="entry-bottom">
+          <div class="entry-controls">
+            <select class="status-select" data-id="${esc(e.id)}">
+              ${STATUSES.map(s=>`<option value="${s.key}" ${s.key===e.status?'selected':''}>${esc(s.label)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="reactions">
+            ${REACTIONS.map(r => `
+              <button class="react-btn" data-id="${esc(e.id)}" data-emoji="${r}" type="button">
+                ${r} <span class="cnt">${reactions[r]||0}</span>
+              </button>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.status-select').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      const id = sel.dataset.id;
+      const newStatus = sel.value;
+      const e = allEntries.find(x=>x.id===id);
+      if(e) e.status = newStatus;
+      render();
+      if(supa){
+        const {error} = await supa.from('entries').update({status:newStatus, updated_at:new Date().toISOString()}).eq('id', id);
+        if(error) console.error(error);
+      }
+    });
+  });
+  el.querySelectorAll('.react-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const emoji = btn.dataset.emoji;
+      const e = allEntries.find(x=>x.id===id);
+      if(e){ e.reactions = {...(e.reactions||{})}; e.reactions[emoji] = (e.reactions[emoji]||0)+1; render(); }
+      if(supa){
+        const {data, error} = await supa.rpc('increment_reaction', {entry_id:id, emoji});
+        if(error) console.error(error);
+        else if(e) e.reactions = data;
+      }
+    });
+  });
+  el.querySelectorAll('.proof-open').forEach(img => {
+    img.addEventListener('click', () => openLightbox(img.dataset.src));
+  });
+}
+
+function renderLeaderboard(){
+  const counts = {};
+  allEntries.forEach(e => { if(e.logged_by) counts[e.logged_by] = (counts[e.logged_by]||0)+1; });
+  const rows = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const el = document.getElementById('leaderGrid');
+  if(!rows.length){ el.innerHTML = '<div class="leader-empty">No entries yet — be the first.</div>'; return; }
+  const max = rows[0][1];
+  el.innerHTML = rows.map(([name,count],i) => `
+    <button class="leader-row ${activePerson===name?'active':''}" data-name="${esc(name)}" type="button">
+      <span class="leader-rank ${i===0?'top1':''}">${i+1}</span>
+      <span class="leader-name">${esc(name)}</span>
+      <span class="leader-bar-wrap"><span class="leader-bar" style="width:${Math.max(6,(count/max)*100)}%"></span></span>
+      <span class="leader-count">${count}</span>
+    </button>
+  `).join('');
+  document.querySelectorAll('.leader-row').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activePerson = activePerson === btn.dataset.name ? null : btn.dataset.name;
+      render();
+    });
+  });
+}
+
+function openLightbox(src){
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+document.getElementById('lightbox').addEventListener('click', () => {
+  document.getElementById('lightbox').classList.remove('open');
+});
+
+document.getElementById('clearFilter').addEventListener('click', () => { activePerson = null; render(); });
+
+document.getElementById('f-status').addEventListener('change', (e) => {
+  document.getElementById('visitDateWrap').style.display = e.target.value === 'visit' ? 'block' : 'none';
+});
+
+document.getElementById('searchBox').addEventListener('input', (e) => {
+  searchTerm = e.target.value; render();
+});
+
+document.getElementById('f-proof').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  proofFile = file || null;
+  const preview = document.getElementById('proofPreview');
+  if(file){
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+});
+
+document.getElementById('logForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const you = document.getElementById('f-you').value.trim();
+  const alum = document.getElementById('f-alum').value.trim();
+  const status = document.getElementById('f-status').value;
+  const method = document.getElementById('f-method').value;
+  const visitDate = document.getElementById('f-visitdate').value;
+  const notes = document.getElementById('f-notes').value.trim();
+  if(!you || !alum) return;
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  let proofUrl = null;
+  try{
+    if(supa && proofFile){
+      btn.textContent = 'Uploading proof…';
+      const ext = (proofFile.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+      const {error: upErr} = await supa.storage.from('proof').upload(path, proofFile);
+      if(upErr) throw upErr;
+      proofUrl = supa.storage.from('proof').getPublicUrl(path).data.publicUrl;
+    }
+
+    const data = {
+      logged_by: you, alum_name: alum, status, method,
+      visit_date: visitDate || null, notes, proof_url: proofUrl, reactions: {},
+    };
+
+    btn.textContent = 'Saving…';
+    if(supa){
+      const {data: inserted, error} = await supa.from('entries').insert(data).select().single();
+      if(error) throw error;
+      allEntries.unshift(inserted);
+    } else {
+      allEntries.unshift({id:'local-'+Date.now(), created_at:new Date().toISOString(), ...data});
+    }
+    render();
+
+    document.getElementById('f-alum').value = '';
+    document.getElementById('f-notes').value = '';
+    document.getElementById('f-visitdate').value = '';
+    document.getElementById('f-proof').value = '';
+    document.getElementById('proofPreview').style.display = 'none';
+    proofFile = null;
+    localStorage.setItem('outreach-you', you);
+    document.getElementById('formNote').textContent = 'Saved.';
+    setTimeout(()=>{ document.getElementById('formNote').textContent = 'Saves for the whole class to see.'; }, 1800);
+  } catch(err){
+    console.error(err);
+    document.getElementById('formNote').textContent = 'Could not save — try again.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Add entry';
+  }
+});
+
+try{
+  const saved = localStorage.getItem('outreach-you');
+  if(saved) document.getElementById('f-you').value = saved;
+}catch(e){}
+
+render();
+
+async function init(){
+  const url = window.SUPABASE_URL, key = window.SUPABASE_ANON_KEY;
+  if(!url || !key){
+    document.getElementById('listStatus').textContent =
+      'Not connected to a database yet — add your Supabase URL and key in config.js. Showing local-only entries for now.';
+    return;
+  }
+  supa = window.supabase.createClient(url, key);
+
+  const {data, error} = await supa.from('entries').select('*').order('created_at', {ascending:false});
+  if(error){
+    console.error(error);
+    document.getElementById('listStatus').textContent = 'Could not reach the database — check config.js keys.';
+    return;
+  }
+  allEntries = data || [];
+  render();
+
+  supa.channel('entries-changes')
+    .on('postgres_changes', {event:'*', schema:'public', table:'entries'}, payload => {
+      if(payload.eventType === 'INSERT'){
+        if(!allEntries.find(e=>e.id===payload.new.id)) allEntries.unshift(payload.new);
+      } else if(payload.eventType === 'UPDATE'){
+        const i = allEntries.findIndex(e=>e.id===payload.new.id);
+        if(i>-1) allEntries[i] = payload.new;
+      } else if(payload.eventType === 'DELETE'){
+        allEntries = allEntries.filter(e=>e.id!==payload.old.id);
+      }
+      render();
+    })
+    .subscribe();
+}
+init();
+</script>
+</body>
+</html>
