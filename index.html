@@ -191,10 +191,13 @@ button.primary:disabled{opacity:.5; cursor:not-allowed;}
 .source-row .source-meta{font-size:10.5px; color:var(--text-muted); font-family:"IBM Plex Mono", monospace; white-space:nowrap;}
 .source-empty{font-size:12.5px; color:var(--text-muted); padding:2px 0;}
 
-/* ---------- auto-found suggestions (main column) ---------- */
-.auto-found-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+/* ---------- tools panel (tabbed) ---------- */
+.tool-section[hidden]{display:none;}
+.tool-grid{display:grid; grid-template-columns:340px 1fr; gap:22px; align-items:start;}
+@media (max-width:820px){ .tool-grid{grid-template-columns:1fr;} }
+
+/* ---------- auto-found suggestions ---------- */
 .auto-found-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px;}
-.auto-found-grid[hidden]{display:none;}
 .auto-card{
   border:1px solid var(--border); border-radius:10px; padding:12px 13px; background:var(--bg);
   display:flex; flex-direction:column; gap:7px;
@@ -263,7 +266,6 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
 <div class="stats" id="stats"></div>
 
 <div class="layout">
-  <div style="display:flex; flex-direction:column; gap:22px;">
   <div class="panel">
     <div class="panel-head">
       <h2>Log outreach</h2>
@@ -324,71 +326,6 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
   </div>
 
   <div class="panel">
-    <div class="panel-head">
-      <h2>Auto-discovery</h2>
-      <div class="sub">Runs daily on its own. Add sources or run it now.</div>
-    </div>
-    <div class="panel-body" style="display:flex; flex-direction:column; gap:18px;">
-      <div>
-        <div class="source-label">Search queries</div>
-        <form id="addQueryForm" class="source-add-row">
-          <input id="new-query" placeholder="e.g. computer science alumni AI startup" autocomplete="off">
-          <button class="icon-btn" type="submit">Add</button>
-        </form>
-        <div class="source-list" id="queryList"></div>
-      </div>
-      <div>
-        <div class="source-label">Pages watched</div>
-        <form id="addPageForm" class="source-add-row">
-          <input id="new-page" placeholder="https://…" autocomplete="off">
-          <button class="icon-btn" type="submit">Add</button>
-        </form>
-        <div class="source-list" id="pageList"></div>
-      </div>
-      <button class="primary" type="button" id="runNowBtn" style="margin-top:0;">Run auto-discovery now</button>
-      <div class="form-note" id="runNowNote"></div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Suggested contacts</h2>
-      <div class="sub">Know someone worth reaching out to? Drop their name in — anyone can claim it.</div>
-    </div>
-    <div class="panel-body">
-      <form id="suggestForm" style="display:flex; flex-direction:column; gap:10px;">
-        <div>
-          <label for="sg-name">Alumni name</label>
-          <input id="sg-name" required placeholder="e.g. Marcus Cole '19" autocomplete="off">
-        </div>
-        <div>
-          <label for="sg-note">Why them? (optional)</label>
-          <input id="sg-note" placeholder="e.g. Works in AI at a startup">
-        </div>
-        <button class="primary" type="submit" id="suggestBtn" style="margin-top:0;">Add suggestion</button>
-      </form>
-      <div class="suggestion-list" id="suggestionList" style="margin-top:14px;">
-        <div class="leader-empty">No suggestions yet — add one above.</div>
-      </div>
-    </div>
-  </div>
-  </div>
-
-  <div style="display:flex; flex-direction:column; gap:22px;">
-  <div class="panel">
-    <div class="panel-head auto-found-head">
-      <div>
-        <h2>Auto-found suggestions <span class="suggestion-tag" id="autoFoundCount">0</span></h2>
-        <div class="sub">Names the daily scan turned up on its own — glance and claim, or dismiss.</div>
-      </div>
-      <button class="icon-btn" type="button" id="toggleAutoFound">Show</button>
-    </div>
-    <div class="panel-body auto-found-grid" id="autoFoundGrid">
-      <div class="leader-empty">Nothing found yet.</div>
-    </div>
-  </div>
-
-  <div class="panel">
     <div class="panel-head" style="border-bottom:none; padding-bottom:0;">
       <h2>All outreach</h2>
       <div class="sub">Filter by status, search by name, or click a name on the leaderboard below</div>
@@ -401,32 +338,6 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
     <div class="status-msg" id="listStatus"></div>
     <div class="entries" id="entries"></div>
   </div>
-
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Email template</h2>
-      <div class="sub">Pick a contact — the note about them (if any) gets folded into a draft you can copy.</div>
-    </div>
-    <div class="panel-body" style="display:flex; flex-direction:column; gap:12px;">
-      <div>
-        <label for="emailContact">Contact</label>
-        <select id="emailContact">
-          <option value="">Choose a name…</option>
-        </select>
-      </div>
-      <div>
-        <label for="emailSubject">Subject</label>
-        <input id="emailSubject">
-      </div>
-      <div>
-        <label for="emailBody">Body</label>
-        <textarea id="emailBody" style="min-height:220px; font-family:'IBM Plex Sans',sans-serif; line-height:1.5;"></textarea>
-      </div>
-      <button class="primary" type="button" id="copyEmailBtn" style="margin-top:0;">Copy to clipboard</button>
-      <div class="form-note" id="emailNote">Auto-found details can be rough — read it over and edit before sending.</div>
-    </div>
-  </div>
-  </div>
 </div>
 
 <div class="leaderboard">
@@ -435,6 +346,81 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
     <div class="sub">Click a name to filter the list above to just their entries</div>
   </div>
   <div class="leader-grid" id="leaderGrid"><div class="leader-empty">No entries yet — be the first.</div></div>
+</div>
+
+<div class="panel">
+  <div class="panel-head" style="border-bottom:none; padding-bottom:0;">
+    <h2>Tools</h2>
+    <div class="sub">Suggestions, auto-discovery, and email drafts.</div>
+  </div>
+  <div class="tabs" id="toolTabs"></div>
+
+  <div class="panel-body">
+    <div class="tool-section" data-tool="suggestions">
+      <div class="tool-grid">
+        <div>
+          <form id="suggestForm" style="display:flex; flex-direction:column; gap:10px;">
+            <div>
+              <label for="sg-name">Alumni name</label>
+              <input id="sg-name" required placeholder="e.g. Marcus Cole '19" autocomplete="off">
+            </div>
+            <div>
+              <label for="sg-note">Why them? (optional)</label>
+              <input id="sg-note" placeholder="e.g. Works in AI at a startup">
+            </div>
+            <button class="primary" type="submit" id="suggestBtn" style="margin-top:0;">Add suggestion</button>
+          </form>
+        </div>
+        <div class="suggestion-list" id="suggestionList">
+          <div class="leader-empty">No suggestions yet — add one on the left.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-section" data-tool="autofound" hidden>
+      <div class="auto-found-grid" id="autoFoundGrid">
+        <div class="leader-empty">Nothing found yet — add a source in the Auto-discovery tab.</div>
+      </div>
+    </div>
+
+    <div class="tool-section" data-tool="discovery" hidden>
+      <div class="tool-grid">
+        <div>
+          <div class="source-label">Search queries</div>
+          <form id="addQueryForm" class="source-add-row">
+            <input id="new-query" placeholder="e.g. computer science alumni AI startup" autocomplete="off">
+            <button class="icon-btn" type="submit">Add</button>
+          </form>
+          <div class="source-list" id="queryList"></div>
+        </div>
+        <div>
+          <div class="source-label">Pages watched</div>
+          <form id="addPageForm" class="source-add-row">
+            <input id="new-page" placeholder="https://…" autocomplete="off">
+            <button class="icon-btn" type="submit">Add</button>
+          </form>
+          <div class="source-list" id="pageList"></div>
+        </div>
+      </div>
+      <button class="primary" type="button" id="runNowBtn">Run auto-discovery now</button>
+      <div class="form-note" id="runNowNote"></div>
+    </div>
+
+    <div class="tool-section" data-tool="email" hidden>
+      <div style="max-width:520px;">
+        <label for="emailContact">Contact</label>
+        <select id="emailContact">
+          <option value="">Choose a name…</option>
+        </select>
+        <label for="emailSubject" style="margin-top:12px;">Subject</label>
+        <input id="emailSubject">
+        <label for="emailBody" style="margin-top:12px;">Body</label>
+        <textarea id="emailBody" style="min-height:220px; font-family:'IBM Plex Sans',sans-serif; line-height:1.5;"></textarea>
+        <button class="primary" type="button" id="copyEmailBtn">Copy to clipboard</button>
+        <div class="form-note" id="emailNote">Auto-found details can be rough — read it over and edit before sending.</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <footer>Connect.AI · Alumni Outreach Tracker · shared live with everyone who opens this link</footer>
@@ -477,8 +463,8 @@ let searchTerm = '';
 let supa = null;
 let proofFile = null;
 let editingId = null;
-let showAutoFound = true;
 let selectedEmailContact = '';
+let activeTool = 'suggestions';
 
 function esc(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -486,6 +472,27 @@ function esc(s){
 
 function isAutoSuggestion(s){
   return s.suggested_by === 'Auto-scan' || s.suggested_by === 'Auto-search';
+}
+
+const TOOL_TABS = [
+  {key:'suggestions', label:'Suggested Contacts'},
+  {key:'autofound', label:'Auto-Found', count: () => allSuggestions.filter(isAutoSuggestion).length},
+  {key:'discovery', label:'Auto-Discovery'},
+  {key:'email', label:'Email Draft'},
+];
+
+function renderToolTabs(){
+  const el = document.getElementById('toolTabs');
+  el.innerHTML = TOOL_TABS.map(t => {
+    const cnt = t.count ? t.count() : null;
+    return `<button class="tab" type="button" data-key="${t.key}" aria-pressed="${activeTool===t.key}">${esc(t.label)}${cnt!=null ? ` <span class="cnt">${cnt}</span>` : ''}</button>`;
+  }).join('');
+  el.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => { activeTool = btn.dataset.key; render(); });
+  });
+  document.querySelectorAll('.tool-section').forEach(sec => {
+    sec.hidden = sec.dataset.tool !== activeTool;
+  });
 }
 
 function render(){
@@ -497,6 +504,7 @@ function render(){
   renderSources();
   renderAutoFound();
   renderEmailTemplate();
+  renderToolTabs();
 }
 
 // Backend notes look like "Found on foundation.uconn.edu — bio text" or
@@ -518,11 +526,7 @@ function sourceChipLabel(source){
 
 function renderAutoFound(){
   const autoOnes = allSuggestions.filter(isAutoSuggestion);
-  document.getElementById('autoFoundCount').textContent = autoOnes.length;
-
   const grid = document.getElementById('autoFoundGrid');
-  grid.hidden = !showAutoFound;
-  document.getElementById('toggleAutoFound').textContent = showAutoFound ? 'Hide' : 'Show';
 
   if(!autoOnes.length){
     grid.innerHTML = '<div class="leader-empty">Nothing found yet — add a search query or page in Auto-discovery, then run it.</div>';
@@ -548,10 +552,6 @@ function renderAutoFound(){
   });
 }
 
-document.getElementById('toggleAutoFound').addEventListener('click', () => {
-  showAutoFound = !showAutoFound;
-  renderAutoFound();
-});
 
 const CONNECT_AI_BLURB = "I'm a current student in UConn's Connect.AI program — a course where students work as a forward-deployed engineering team. We spend the first half of the semester learning AI engineering and consulting fundamentals, then the second half embedded with a real partner business, scoping, building, and shipping something that actually runs.";
 
