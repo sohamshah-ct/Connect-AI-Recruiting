@@ -184,6 +184,19 @@ button.primary:disabled{opacity:.5; cursor:not-allowed;}
 .source-row .source-meta{font-size:10.5px; color:var(--text-muted); font-family:"IBM Plex Mono", monospace; white-space:nowrap;}
 .source-empty{font-size:12.5px; color:var(--text-muted); padding:2px 0;}
 
+/* ---------- auto-found suggestions (main column) ---------- */
+.auto-found-head{display:flex; align-items:flex-start; justify-content:space-between; gap:10px;}
+.auto-found-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px;}
+.auto-found-grid[hidden]{display:none;}
+.auto-card{
+  border:1px solid var(--border); border-radius:8px; padding:10px 11px; background:var(--bg);
+  display:flex; flex-direction:column; gap:6px;
+}
+.auto-card .suggestion-name{font-size:14px;}
+.auto-card .suggestion-note{-webkit-line-clamp:3; font-size:12px;}
+.auto-card-bottom{display:flex; justify-content:space-between; align-items:center; gap:6px;}
+.auto-card .claim-btn{font-size:12px; padding:5px 9px;}
+
 /* ---------- leaderboard (bottom) ---------- */
 .leaderboard{background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow);}
 .leader-grid{display:flex; flex-direction:column; padding:4px 18px 18px;}
@@ -345,6 +358,20 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
   </div>
   </div>
 
+  <div style="display:flex; flex-direction:column; gap:22px;">
+  <div class="panel">
+    <div class="panel-head auto-found-head">
+      <div>
+        <h2>Auto-found suggestions <span class="suggestion-tag" id="autoFoundCount">0</span></h2>
+        <div class="sub">Names the daily scan turned up on its own — glance and claim, or dismiss.</div>
+      </div>
+      <button class="icon-btn" type="button" id="toggleAutoFound">Show</button>
+    </div>
+    <div class="panel-body auto-found-grid" id="autoFoundGrid" hidden>
+      <div class="leader-empty">Nothing found yet.</div>
+    </div>
+  </div>
+
   <div class="panel">
     <div class="panel-head" style="border-bottom:none; padding-bottom:0;">
       <h2>All outreach</h2>
@@ -357,6 +384,32 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
     </div>
     <div class="status-msg" id="listStatus"></div>
     <div class="entries" id="entries"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Email template</h2>
+      <div class="sub">Pick a contact — the note about them (if any) gets folded into a draft you can copy.</div>
+    </div>
+    <div class="panel-body" style="display:flex; flex-direction:column; gap:12px;">
+      <div>
+        <label for="emailContact">Contact</label>
+        <select id="emailContact">
+          <option value="">Choose a name…</option>
+        </select>
+      </div>
+      <div>
+        <label for="emailSubject">Subject</label>
+        <input id="emailSubject" readonly>
+      </div>
+      <div>
+        <label for="emailBody">Body</label>
+        <textarea id="emailBody" readonly style="min-height:220px; font-family:'IBM Plex Sans',sans-serif; line-height:1.5;"></textarea>
+      </div>
+      <button class="primary" type="button" id="copyEmailBtn" style="margin-top:0;">Copy to clipboard</button>
+      <div class="form-note" id="emailNote"></div>
+    </div>
+  </div>
   </div>
 </div>
 
@@ -408,9 +461,15 @@ let searchTerm = '';
 let supa = null;
 let proofFile = null;
 let editingId = null;
+let showAutoFound = false;
+let selectedEmailContact = '';
 
 function esc(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function isAutoSuggestion(s){
+  return s.suggested_by === 'Auto-scan' || s.suggested_by === 'Auto-search';
 }
 
 function render(){
@@ -420,7 +479,103 @@ function render(){
   renderLeaderboard();
   renderSuggestions();
   renderSources();
+  renderAutoFound();
+  renderEmailTemplate();
 }
+
+function renderAutoFound(){
+  const autoOnes = allSuggestions.filter(isAutoSuggestion);
+  document.getElementById('autoFoundCount').textContent = autoOnes.length;
+
+  const grid = document.getElementById('autoFoundGrid');
+  grid.hidden = !showAutoFound;
+  document.getElementById('toggleAutoFound').textContent = showAutoFound ? 'Hide' : 'Show';
+
+  if(!autoOnes.length){
+    grid.innerHTML = '<div class="leader-empty">Nothing found yet — add a search query or page in Auto-discovery, then run it.</div>';
+    return;
+  }
+  grid.innerHTML = autoOnes.map(s => `
+    <div class="auto-card" data-id="${esc(s.id)}">
+      <div class="suggestion-name">${esc(s.alum_name)}</div>
+      ${s.note ? `<div class="suggestion-note" title="${esc(s.note)}">${esc(s.note)}</div>` : ''}
+      <div class="auto-card-bottom">
+        <button class="claim-btn" data-id="${esc(s.id)}" data-name="${esc(s.alum_name)}" type="button">I'll reach out</button>
+        <button class="drop-suggestion-btn" data-id="${esc(s.id)}" type="button" title="Remove" aria-label="Remove">×</button>
+      </div>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.claim-btn').forEach(btn => {
+    btn.addEventListener('click', () => claimSuggestion(btn.dataset.id, btn.dataset.name));
+  });
+  grid.querySelectorAll('.drop-suggestion-btn').forEach(btn => {
+    btn.addEventListener('click', () => removeSuggestion(btn.dataset.id));
+  });
+}
+
+document.getElementById('toggleAutoFound').addEventListener('click', () => {
+  showAutoFound = !showAutoFound;
+  renderAutoFound();
+});
+
+const CONNECT_AI_BLURB = "I'm a current student in UConn's Connect.AI program — a course where students work as a forward-deployed engineering team. We spend the first half of the semester learning AI engineering and consulting fundamentals, then the second half embedded with a real partner business, scoping, building, and shipping something that actually runs.";
+
+function stripNotePrefix(note){
+  if(!note) return '';
+  return note.replace(/^(Found on [^—]+—\s*|Found via search —\s*|Auto-found[^—]*—\s*)/, '').trim();
+}
+
+function buildEmailTemplate(contact){
+  const you = document.getElementById('f-you').value.trim() || localStorage.getItem('outreach-you') || '[Your name]';
+  const firstName = (contact.alum_name || '').split(' ')[0];
+  const bio = stripNotePrefix(contact.note);
+
+  const subject = `UConn Connect.AI — quick hello from a current student`;
+  const bioLine = bio
+    ? `\n\nI came across your name and saw: "${bio}" — I'd love to hear more about your path from UConn into that.`
+    : '';
+  const body = `Hi ${firstName},\n\nMy name is ${you}. ${CONNECT_AI_BLURB}${bioLine}\n\nWould you be open to a quick 15-minute call sometime in the next couple weeks? I'd love to hear about your experience and how you got where you are.\n\nBest,\n${you}\nConnect.AI, University of Connecticut`;
+
+  return {subject, body};
+}
+
+function renderEmailTemplate(){
+  const select = document.getElementById('emailContact');
+  const names = new Map();
+  allSuggestions.forEach(s => { if(!names.has(s.alum_name)) names.set(s.alum_name, s); });
+  allEntries.forEach(e => { if(!names.has(e.alum_name)) names.set(e.alum_name, {alum_name: e.alum_name, note: e.notes ? `Logged note — ${e.notes}` : ''}); });
+
+  const current = select.value;
+  select.innerHTML = '<option value="">Choose a name…</option>' +
+    Array.from(names.keys()).sort().map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if(names.has(current)) select.value = current;
+
+  const contact = names.get(select.value);
+  if(!contact){
+    document.getElementById('emailSubject').value = '';
+    document.getElementById('emailBody').value = '';
+    return;
+  }
+  const {subject, body} = buildEmailTemplate(contact);
+  document.getElementById('emailSubject').value = subject;
+  document.getElementById('emailBody').value = body;
+}
+
+document.getElementById('emailContact').addEventListener('change', renderEmailTemplate);
+
+document.getElementById('copyEmailBtn').addEventListener('click', async () => {
+  const subject = document.getElementById('emailSubject').value;
+  const body = document.getElementById('emailBody').value;
+  const note = document.getElementById('emailNote');
+  if(!body){ note.textContent = 'Pick a contact first.'; return; }
+  try{
+    await navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`);
+    note.textContent = 'Copied to clipboard.';
+  } catch(err){
+    note.textContent = 'Could not copy — select and copy the text manually.';
+  }
+  setTimeout(() => { note.textContent = ''; }, 2500);
+});
 
 function renderSources(){
   const qEl = document.getElementById('queryList');
@@ -523,18 +678,18 @@ document.getElementById('runNowBtn').addEventListener('click', async () => {
 
 function renderSuggestions(){
   const el = document.getElementById('suggestionList');
-  if(!allSuggestions.length){
+  const humanOnes = allSuggestions.filter(s => !isAutoSuggestion(s));
+  if(!humanOnes.length){
     el.innerHTML = '<div class="leader-empty">No suggestions yet — add one above.</div>';
     return;
   }
-  const list = allSuggestions.slice().sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+  const list = humanOnes.slice().sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
   el.innerHTML = list.map(s => {
-    const isAuto = s.suggested_by === 'Auto-scan' || s.suggested_by === 'Auto-search';
     return `
     <div class="suggestion-row" data-id="${esc(s.id)}">
       <div class="suggestion-main">
-        <div class="suggestion-name">${esc(s.alum_name)}${isAuto ? '<span class="suggestion-tag">auto-found</span>' : ''}</div>
-        <div class="suggestion-meta">${isAuto ? 'found automatically' : 'suggested by ' + esc(s.suggested_by)}</div>
+        <div class="suggestion-name">${esc(s.alum_name)}</div>
+        <div class="suggestion-meta">suggested by ${esc(s.suggested_by)}</div>
         ${s.note ? `<div class="suggestion-note" title="${esc(s.note)}">${esc(s.note)}</div>` : ''}
       </div>
       <button class="claim-btn" data-id="${esc(s.id)}" data-name="${esc(s.alum_name)}" type="button">I'll reach out</button>

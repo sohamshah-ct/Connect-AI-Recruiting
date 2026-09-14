@@ -10,7 +10,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const cheerio = require('cheerio');
-const { looksLikeName } = require('../lib/nameFilter');
+const { looksLikeName, isOffTopicBio } = require('../lib/nameFilter');
 
 const CARD_SELECTORS = 'article, li, .card, .person, .profile, .alum, .alumni, .spotlight, .people, .team-member, .bio';
 const HEADING_SELECTORS = 'h1, h2, h3, h4, h5, strong, b';
@@ -45,7 +45,7 @@ function extractCandidates(html, sourceUrl) {
     let bio = cleanText($card.find('p').first().text());
     if (!bio || bio === nameText) bio = cleanText($card.text()).slice(0, 130);
     bio = bio.slice(0, 130);
-    if (!bio) return;
+    if (!bio || isOffTopicBio(bio)) return;
 
     if (!found.has(nameText)) found.set(nameText, bio);
   });
@@ -65,6 +65,7 @@ function extractCandidates(html, sourceUrl) {
       if (!bio) bio = cleanText($el.parent().next('p').text());
       if (!bio) bio = cleanText($el.closest('li, p').text()).slice(0, 130);
       bio = bio.slice(0, 130);
+      if (isOffTopicBio(bio)) return;
 
       found.set(nameText, bio);
     });
