@@ -160,6 +160,21 @@ button.primary:disabled{opacity:.5; cursor:not-allowed;}
 }
 .drop-suggestion-btn:hover{color:var(--crit);}
 
+/* ---------- auto-discovery sources ---------- */
+.source-label{font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px;}
+.source-add-row{display:flex; gap:6px; margin-bottom:8px;}
+.source-add-row input{flex:1;}
+.source-add-row .icon-btn{padding:8px 12px; white-space:nowrap;}
+.source-list{display:flex; flex-direction:column; gap:6px;}
+.source-row{
+  display:flex; align-items:center; gap:8px; padding:7px 9px;
+  border:1px solid var(--border); border-radius:7px; background:var(--bg);
+  font-size:12.5px;
+}
+.source-row .source-text{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.source-row .source-meta{font-size:10.5px; color:var(--text-muted); font-family:"IBM Plex Mono", monospace; white-space:nowrap;}
+.source-empty{font-size:12.5px; color:var(--text-muted); padding:2px 0;}
+
 /* ---------- leaderboard (bottom) ---------- */
 .leaderboard{background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow);}
 .leader-grid{display:flex; flex-direction:column; padding:4px 18px 18px;}
@@ -292,6 +307,33 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
       </div>
     </div>
   </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Auto-discovery</h2>
+      <div class="sub">Runs daily on its own. Add sources or run it now.</div>
+    </div>
+    <div class="panel-body" style="display:flex; flex-direction:column; gap:18px;">
+      <div>
+        <div class="source-label">Search queries</div>
+        <form id="addQueryForm" class="source-add-row">
+          <input id="new-query" placeholder="e.g. computer science alumni AI startup" autocomplete="off">
+          <button class="icon-btn" type="submit">Add</button>
+        </form>
+        <div class="source-list" id="queryList"></div>
+      </div>
+      <div>
+        <div class="source-label">Pages watched</div>
+        <form id="addPageForm" class="source-add-row">
+          <input id="new-page" placeholder="https://…" autocomplete="off">
+          <button class="icon-btn" type="submit">Add</button>
+        </form>
+        <div class="source-list" id="pageList"></div>
+      </div>
+      <button class="primary" type="button" id="runNowBtn" style="margin-top:0;">Run auto-discovery now</button>
+      <div class="form-note" id="runNowNote"></div>
+    </div>
+  </div>
   </div>
 
   <div class="panel">
@@ -349,6 +391,8 @@ document.getElementById('weekBadge').textContent =
 
 let allEntries = [];
 let allSuggestions = [];
+let allQueries = [];
+let allPages = [];
 let activeFilter = 'all';
 let activePerson = null;
 let searchTerm = '';
@@ -366,7 +410,107 @@ function render(){
   renderEntries();
   renderLeaderboard();
   renderSuggestions();
+  renderSources();
 }
+
+function renderSources(){
+  const qEl = document.getElementById('queryList');
+  qEl.innerHTML = allQueries.length
+    ? allQueries.map(q => `
+        <div class="source-row" data-id="${esc(q.id)}">
+          <span class="source-text" title="${esc(q.query)}">${esc(q.query)}</span>
+          ${q.last_run_at ? `<span class="source-meta">${esc(q.last_found_count ?? 0)} found</span>` : `<span class="source-meta">not run yet</span>`}
+          <button class="icon-btn del-query-btn" data-id="${esc(q.id)}" type="button">×</button>
+        </div>`).join('')
+    : '<div class="source-empty">No search queries yet.</div>';
+  qEl.querySelectorAll('.del-query-btn').forEach(btn => {
+    btn.addEventListener('click', () => removeSource('search_queries', btn.dataset.id, () => { allQueries = allQueries.filter(q => q.id !== btn.dataset.id); }));
+  });
+
+  const pEl = document.getElementById('pageList');
+  pEl.innerHTML = allPages.length
+    ? allPages.map(p => `
+        <div class="source-row" data-id="${esc(p.id)}">
+          <span class="source-text" title="${esc(p.url)}">${esc(p.label || p.url)}</span>
+          ${p.last_scanned_at ? `<span class="source-meta">${esc(p.last_found_count ?? 0)} found</span>` : `<span class="source-meta">not run yet</span>`}
+          <button class="icon-btn del-page-btn" data-id="${esc(p.id)}" type="button">×</button>
+        </div>`).join('')
+    : '<div class="source-empty">No pages watched yet.</div>';
+  pEl.querySelectorAll('.del-page-btn').forEach(btn => {
+    btn.addEventListener('click', () => removeSource('watch_pages', btn.dataset.id, () => { allPages = allPages.filter(p => p.id !== btn.dataset.id); }));
+  });
+}
+
+async function removeSource(table, id, localUpdate){
+  localUpdate();
+  renderSources();
+  if(supa){
+    const {error} = await supa.from(table).delete().eq('id', id);
+    if(error) console.error(error);
+  }
+}
+
+document.getElementById('addQueryForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('new-query');
+  const query = input.value.trim();
+  if(!query) return;
+  input.value = '';
+  if(supa){
+    const {data, error} = await supa.from('search_queries').insert({query}).select().single();
+    if(error){ alert('Could not add — it may already exist.'); return; }
+    allQueries.unshift(data);
+  } else {
+    allQueries.unshift({id:'local-'+Date.now(), query});
+  }
+  renderSources();
+});
+
+document.getElementById('addPageForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = document.getElementById('new-page');
+  const url = input.value.trim();
+  if(!url) return;
+  input.value = '';
+  if(supa){
+    const {data, error} = await supa.from('watch_pages').insert({url}).select().single();
+    if(error){ alert('Could not add — it may already exist, or the URL is invalid.'); return; }
+    allPages.unshift(data);
+  } else {
+    allPages.unshift({id:'local-'+Date.now(), url});
+  }
+  renderSources();
+});
+
+document.getElementById('runNowBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('runNowBtn');
+  const note = document.getElementById('runNowNote');
+  btn.disabled = true; btn.textContent = 'Running…';
+  note.textContent = '';
+  try{
+    const [scrapeRes, searchRes] = await Promise.all([
+      fetch('/api/scrape').then(r => r.json()).catch(err => ({error: String(err)})),
+      fetch('/api/search').then(r => r.json()).catch(err => ({error: String(err)})),
+    ]);
+    const scrapeAdded = (scrapeRes.results || []).reduce((n, r) => n + (r.added || 0), 0);
+    const searchAdded = (searchRes.results || []).reduce((n, r) => n + (r.added || 0), 0);
+    note.textContent = `Done — ${scrapeAdded + searchAdded} new suggestion(s) found.`;
+    if(supa){
+      const {data} = await supa.from('suggestions').select('*').order('created_at', {ascending:false});
+      allSuggestions = data || [];
+      const {data: qData} = await supa.from('search_queries').select('*');
+      allQueries = qData || [];
+      const {data: pData} = await supa.from('watch_pages').select('*');
+      allPages = pData || [];
+      render();
+    }
+  } catch(err){
+    console.error(err);
+    note.textContent = 'Could not run auto-discovery — try again.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Run auto-discovery now';
+  }
+});
 
 function renderSuggestions(){
   const el = document.getElementById('suggestionList');
@@ -832,6 +976,14 @@ async function init(){
   const {data: sgData, error: sgError} = await supa.from('suggestions').select('*').order('created_at', {ascending:false});
   if(sgError) console.error(sgError);
   allSuggestions = sgData || [];
+
+  const {data: qData, error: qError} = await supa.from('search_queries').select('*').order('created_at', {ascending:false});
+  if(qError) console.error(qError);
+  allQueries = qData || [];
+
+  const {data: pData, error: pError} = await supa.from('watch_pages').select('*').order('created_at', {ascending:false});
+  if(pError) console.error(pError);
+  allPages = pData || [];
 
   render();
 

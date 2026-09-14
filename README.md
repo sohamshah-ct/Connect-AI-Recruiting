@@ -12,36 +12,21 @@ A shared tracker for Connect.AI's alumni outreach. Everyone in the class logs th
 - 👏 / 🎉 reactions on entries.
 - A leaderboard ranking who's contacted the most people — click a name to filter the feed to just their entries.
 - A shared "Suggested contacts" queue — drop in a name worth reaching out to, anyone can claim it.
-- Two daily auto-discovery jobs (free Vercel crons) that feed the suggestions queue automatically:
-  - **Page scan** (`api/scrape.js`) — checks specific pages you point it at (a department's "notable alumni" page, a spotlight listing) for names.
-  - **Search-based discovery** (`api/search.js`) — runs search queries you configure through Google's Custom Search API (free, 100 queries/day) scoped to `*.uconn.edu` and `*.linkedin.com`, and pulls candidate names out of the results — including what's publicly indexed about LinkedIn profiles, without scraping LinkedIn directly (which blocks scrapers and disallows it in their terms).
-  
+- Two daily auto-discovery jobs (free Vercel crons, no API key or billing account needed for either) that feed the suggestions queue automatically, manageable right from the "Auto-discovery" panel in the app — add/remove sources or hit "Run now", no SQL required:
+  - **Page scan** (`api/scrape.js`) — checks specific pages you add (a department's "notable alumni" page, a spotlight listing) for names.
+  - **Search-based discovery** (`api/search.js`) — runs search queries you add against DuckDuckGo's public results and pulls candidate names out of what comes back — including what's publicly indexed about LinkedIn profiles, without scraping LinkedIn directly (which actively blocks and pursues scrapers; DuckDuckGo doesn't enforce against light, occasional use like this).
+
   Both are heuristics, not verified facts — treat anything they surface as a lead to glance at and claim or dismiss, same as a suggestion a person typed in by hand.
 - Everything's shared and updates live across everyone who has the page open.
 
-## Setting up auto-discovery
+## Auto-discovery
 
-**Page scan** — add a row to `watch_pages` in Supabase (SQL Editor):
-```sql
-insert into watch_pages (url, label) values
-  ('https://alumni.business.uconn.edu/hof/past-inductees/', 'UConn Business Hall of Fame');
-```
-Trigger it immediately by opening `/api/scrape` in a browser, or wait for the daily run.
+Managed entirely from the app — no Supabase SQL Editor needed for day-to-day use. In the **Auto-discovery** panel:
+- Add a search query (e.g. "computer science alumni AI startup") and it'll get searched daily.
+- Add a page URL (e.g. a department's alumni spotlight page) and it'll get scanned daily.
+- Hit **Run auto-discovery now** to trigger both immediately instead of waiting for the next scheduled run.
 
-**Search-based discovery** — needs a free Google Custom Search setup (~10 min, no payment info required):
-1. Go to [console.cloud.google.com](https://console.cloud.google.com), create a project (or use an existing one), and enable the **Custom Search API** under APIs & Services.
-2. Create an API key under APIs & Services → Credentials. This is `GOOGLE_SEARCH_API_KEY`.
-3. Go to [programmablesearchengine.google.com](https://programmablesearchengine.google.com), create a new search engine. Google retired "search the entire web" for new engines in Jan 2026 — new engines instead search a list of up to 50 domains you specify. Add `*.uconn.edu` and `*.linkedin.com` under "Sites to search" (Setup → Basics on the engine's control panel). Copy its **Search engine ID** from that same page — this is `GOOGLE_SEARCH_CX`.
-4. In Vercel → Settings → Environment Variables, add both as Production variables, then redeploy.
-5. Add search queries to run in Supabase:
-   ```sql
-   insert into search_queries (query, label) values
-     ('"Connect.AI" UConn alumni', 'Connect.AI alumni mentions'),
-     ('UConn computer science alumni AI startup', 'CS alumni working in AI');
-   ```
-6. Trigger it immediately by opening `/api/search` in a browser, or wait for the daily run.
-
-Free tier caps at 100 Google searches/day total across all queries — plenty for a handful of daily queries with room to spare.
+Both crons run once a day for free on Vercel's Hobby plan. No API keys, no billing account, nothing to sign up for.
 
 ## Stack
 

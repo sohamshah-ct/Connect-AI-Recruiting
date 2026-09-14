@@ -1,26 +1,27 @@
-// Runs on a schedule (see vercel.json crons), free under Google's Custom
-// Search API daily quota (100 queries/day at no cost). Runs each query in
-// the `search_queries` table, pulls candidate names out of the result
-// titles/snippets, and drops new ones into the `suggestions` queue.
+// Runs on a schedule (see vercel.json crons). No API key, no account, no
+// billing card — queries DuckDuckGo's public HTML results page directly
+// (html.duckduckgo.com/html/), which needs no auth and has no paid tier
+// to accidentally hit. This is not an official API and is a step down in
+// result quality from a real search index, but it's genuinely free with
+// nothing to sign up for. Low-volume, occasional use like this daily cron
+// is the kind of thing DuckDuckGo doesn't enforce against (unlike
+// LinkedIn, which actively blocks and pursues scrapers) — still, keep
+// query volume modest and don't turn this into a high-frequency job.
 //
-// The Programmable Search Engine backing this is scoped to *.uconn.edu and
-// *.linkedin.com (Google retired open "search the entire web" for new
-// engines in Jan 2026 — new engines pick up to 50 domains instead). This
-// is how we get relevance-ranked discovery that includes what Google's
-// public index shows about LinkedIn profiles, without scraping LinkedIn
-// directly — LinkedIn blocks scrapers and disallows it in their terms;
-// reading their already-public, already-indexed pages is a different
-// thing.
+// Runs each query in the `search_queries` table, pulls candidate names
+// out of the result titles/snippets, and drops new ones into the
+// `suggestions` queue.
 //
 // Heuristic-based, not perfect. Meant to surface leads for a human to
 // glance at and claim or dismiss, same as any other suggestion.
 
 const { createClient } = require('@supabase/supabase-js');
+const cheerio = require('cheerio');
 const { looksLikeName } = require('../lib/nameFilter');
 
-const GOOGLE_SEARCH_ENDPOINT = 'https://www.googleapis.com/customsearch/v1';
+const DDG_ENDPOINT = 'https://html.duckduckgo.com/html/';
 
-// Google result titles are usually "Name - Site", "Name | Site",
+// DuckDuckGo result titles are usually "Name - Site", "Name | Site",
 // "Name's Post", "Name - Job Title - Company | LinkedIn", etc.
 // Pull the leading name-shaped chunk off the front.
 function nameFromTitle(title) {
@@ -28,26 +29,42 @@ function nameFromTitle(title) {
   const firstChunk = title.split(/\s[-|–—]\s/)[0].trim();
   const noPossessive = firstChunk.replace(/[’']s\b.*$/, '').trim();
   if (looksLikeName(noPossessive)) return noPossessive;
-  // Try just the first two capitalized words as a last resort.
   const words = noPossessive.split(/\s+/).slice(0, 3).join(' ');
   return looksLikeName(words) ? words : null;
+}
+
+async function ddgSearch(query) {
+  const resp = await fetch(DDG_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'Mozilla/5.0 (compatible; Connect.AI-Alumni-Tracker/1.0; class project)',
+    },
+    body: new URLSearchParams({ q: query }).toString(),
+    signal: AbortSignal.timeout(12000),
+  });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const html = await resp.text();
+  const $ = cheerio.load(html);
+
+  const items = [];
+  $('.result').each((_, el) => {
+    const $el = $(el);
+    const title = $el.find('.result__a').first().text().trim();
+    const snippet = $el.find('.result__snippet').first().text().trim();
+    const link = $el.find('.result__a').first().attr('href') || '';
+    if (title) items.push({ title, snippet, link });
+  });
+  return items;
 }
 
 module.exports = async (req, res) => {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_ANON_KEY;
-  const googleKey = process.env.GOOGLE_SEARCH_API_KEY;
-  const googleCx = process.env.GOOGLE_SEARCH_CX;
-
   if (!supabaseUrl || !supabaseKey) {
     res.status(500).json({ error: 'SUPABASE_URL / SUPABASE_ANON_KEY not set on this Vercel project.' });
     return;
   }
-  if (!googleKey || !googleCx) {
-    res.status(500).json({ error: 'GOOGLE_SEARCH_API_KEY / GOOGLE_SEARCH_CX not set on this Vercel project.' });
-    return;
-  }
-
   const supa = createClient(supabaseUrl, supabaseKey);
 
   const { data: queries, error: qErr } = await supa.from('search_queries').select('*');
@@ -56,7 +73,7 @@ module.exports = async (req, res) => {
     return;
   }
   if (!queries || !queries.length) {
-    res.status(200).json({ message: 'No search_queries configured yet — add rows to the search_queries table.' });
+    res.status(200).json({ message: 'No search_queries configured yet — add rows to the search_queries table, or use the dashboard.' });
     return;
   }
 
@@ -72,16 +89,7 @@ module.exports = async (req, res) => {
   const results = [];
   for (const q of queries) {
     try {
-      const apiUrl = `${GOOGLE_SEARCH_ENDPOINT}?key=${encodeURIComponent(googleKey)}&cx=${encodeURIComponent(googleCx)}&q=${encodeURIComponent(q.query)}&num=10`;
-      const resp = await fetch(apiUrl, { signal: AbortSignal.timeout(10000) });
-      const body = await resp.json();
-
-      if (!resp.ok) {
-        results.push({ query: q.query, error: body?.error?.message || `HTTP ${resp.status}` });
-        continue;
-      }
-
-      const items = body.items || [];
+      const items = await ddgSearch(`${q.query} uconn`);
       const seenThisQuery = new Set();
       let added = 0;
 
