@@ -38,16 +38,22 @@ function extractCandidates(html, sourceUrl) {
 
   // Pass 1: card-shaped containers (bio pages, spotlight lists) — the
   // strongest signal, since heading + paragraph is a real profile shape.
+  // Skip any container holding MORE than one heading — that means it
+  // wraps multiple people (a grid cell, a whole list), and grabbing
+  // "the first heading" + "the first paragraph" from a multi-person
+  // container is exactly how one person's name gets paired with a
+  // different person's bio.
   $(CARD_SELECTORS).each((_, card) => {
     const $card = $(card);
-    const heading = $card.find(HEADING_SELECTORS).first();
-    const nameText = heading.text().trim();
+    const headings = $card.find(HEADING_SELECTORS);
+    if (headings.length !== 1) return;
+    const nameText = headings.first().text().trim();
     if (!looksLikeName(nameText)) return;
 
-    let bio = cleanText($card.find('p').first().text());
-    if (!bio || bio === nameText) bio = cleanText($card.text()).slice(0, 130);
-    bio = bio.slice(0, 130);
-    if (!bio || !isRelevantBio(bio)) return;
+    const paragraphs = $card.find('p');
+    if (paragraphs.length === 0 || paragraphs.length > 2) return;
+    const bio = cleanText(paragraphs.first().text()).slice(0, 130);
+    if (!bio || bio === nameText || !isRelevantBio(bio)) return;
 
     if (!found.has(nameText)) found.set(nameText, bio);
   });
@@ -57,11 +63,11 @@ function extractCandidates(html, sourceUrl) {
   // "card" wrapper. Headings only — links (<a>) turned out to catch too
   // much nav/site-chrome text ("Site A-Z") to be worth the extra recall.
   //
-  // Bio must come from an immediate sibling, never `.closest()` — on a
-  // grid/table layout, closest() can walk up into a shared ancestor that
-  // wraps MULTIPLE people, pairing one person's name with a different
-  // person's bio. No immediate sibling paragraph means no bio, not a
-  // guessed one.
+  // Bio must come from the heading's OWN immediate next sibling only —
+  // no walking up to a parent and taking ITS next sibling, since that
+  // can just as easily cross into a different person's content on a
+  // grid/table layout. No immediate sibling paragraph means no bio,
+  // not a guessed one from someone else.
   if (found.size < 30) {
     $(HEADING_SELECTORS).each((_, el) => {
       if (found.size >= 30) return false;
@@ -69,9 +75,7 @@ function extractCandidates(html, sourceUrl) {
       const nameText = $el.text().trim();
       if (!looksLikeName(nameText) || found.has(nameText)) return;
 
-      let bio = cleanText($el.next('p').text());
-      if (!bio) bio = cleanText($el.parent().next('p').text());
-      bio = bio.slice(0, 130);
+      const bio = cleanText($el.next('p').text()).slice(0, 130);
       if (!bio || !isRelevantBio(bio)) return;
 
       found.set(nameText, bio);

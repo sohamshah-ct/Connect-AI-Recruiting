@@ -296,9 +296,14 @@ footer{text-align:center; font-size:12px; color:var(--text-muted); padding-top:6
 
   <div class="panel-body">
     <div class="tool-section" data-tool="suggestions">
+      <div class="form-note" style="margin-top:0; margin-bottom:12px;">Know someone worth reaching out to — from LinkedIn, a friend, a professor's mention? Add them here. It drops into a shared queue anyone in the class can claim and follow up on.</div>
       <div class="tool-grid">
         <div>
           <form id="suggestForm" style="display:flex; flex-direction:column; gap:10px;">
+            <div>
+              <label for="sg-your-name">Your name</label>
+              <input id="sg-your-name" required placeholder="e.g. Priya Nair" autocomplete="off">
+            </div>
             <div>
               <label for="sg-name">Alumni name</label>
               <input id="sg-name" required placeholder="e.g. Marcus Cole '19" autocomplete="off">
@@ -807,12 +812,20 @@ async function removeSuggestion(id){
   }
 }
 
+try{
+  const savedName = localStorage.getItem('outreach-you');
+  if(savedName){
+    document.getElementById('sg-your-name').value = savedName;
+    document.getElementById('f-you').value = savedName;
+  }
+}catch(e){}
+
 document.getElementById('suggestForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const you = document.getElementById('sg-your-name').value.trim();
   const name = document.getElementById('sg-name').value.trim();
   const note = document.getElementById('sg-note').value.trim();
-  const you = document.getElementById('f-you').value.trim() || localStorage.getItem('outreach-you') || 'Someone';
-  if(!name) return;
+  if(!you || !name) return;
 
   const btn = document.getElementById('suggestBtn');
   btn.disabled = true; btn.textContent = 'Adding…';
@@ -829,6 +842,8 @@ document.getElementById('suggestForm').addEventListener('submit', async (e) => {
     renderSuggestions();
     document.getElementById('sg-name').value = '';
     document.getElementById('sg-note').value = '';
+    localStorage.setItem('outreach-you', you);
+    document.getElementById('f-you').value = you;
   } catch(err){
     console.error(err);
     alert('Could not add suggestion — try again.');
@@ -1189,10 +1204,16 @@ document.getElementById('logForm').addEventListener('submit', async (e) => {
   }
 });
 
-try{
-  const saved = localStorage.getItem('outreach-you');
-  if(saved) document.getElementById('f-you').value = saved;
-}catch(e){}
+document.getElementById('f-you').addEventListener('input', () => {
+  const v = document.getElementById('f-you').value;
+  document.getElementById('sg-your-name').value = v;
+  try{ localStorage.setItem('outreach-you', v); }catch(e){}
+});
+document.getElementById('sg-your-name').addEventListener('input', () => {
+  const v = document.getElementById('sg-your-name').value;
+  document.getElementById('f-you').value = v;
+  try{ localStorage.setItem('outreach-you', v); }catch(e){}
+});
 
 render();
 
