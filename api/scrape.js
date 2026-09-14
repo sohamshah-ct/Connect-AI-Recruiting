@@ -10,7 +10,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const cheerio = require('cheerio');
-const { looksLikeName, isRelevantBio } = require('../lib/nameFilter');
+const { looksLikeName } = require('../lib/nameFilter');
 
 const CARD_SELECTORS = 'article, li, .card, .person, .profile, .alum, .alumni, .spotlight, .people, .team-member, .bio';
 const HEADING_SELECTORS = 'h1, h2, h3, h4, h5, strong, b';
@@ -43,6 +43,13 @@ function extractCandidates(html, sourceUrl) {
   // "the first heading" + "the first paragraph" from a multi-person
   // container is exactly how one person's name gets paired with a
   // different person's bio.
+  //
+  // No topic/relevance filtering here on purpose: a page in watch_pages
+  // was deliberately chosen because it's already scoped to the right
+  // audience (a business school hall of fame, an engineering alumni
+  // page). Rejecting a real match because its bio phrasing doesn't hit
+  // a specific keyword list just throws away good, on-topic results —
+  // trust the page choice instead of re-guessing relevance on top of it.
   $(CARD_SELECTORS).each((_, card) => {
     const $card = $(card);
     const headings = $card.find(HEADING_SELECTORS);
@@ -53,7 +60,7 @@ function extractCandidates(html, sourceUrl) {
     const paragraphs = $card.find('p');
     if (paragraphs.length === 0 || paragraphs.length > 2) return;
     const bio = cleanText(paragraphs.first().text()).slice(0, 130);
-    if (!bio || bio === nameText || !isRelevantBio(bio)) return;
+    if (!bio || bio === nameText) return;
 
     if (!found.has(nameText)) found.set(nameText, bio);
   });
@@ -76,7 +83,7 @@ function extractCandidates(html, sourceUrl) {
       if (!looksLikeName(nameText) || found.has(nameText)) return;
 
       const bio = cleanText($el.next('p').text()).slice(0, 130);
-      if (!bio || !isRelevantBio(bio)) return;
+      if (!bio) return;
 
       found.set(nameText, bio);
     });
