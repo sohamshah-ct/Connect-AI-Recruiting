@@ -12,20 +12,37 @@ A shared tracker for Connect.AI's alumni outreach. Everyone in the class logs th
 - 👏 / 🎉 reactions on entries.
 - A leaderboard ranking who's contacted the most people — click a name to filter the feed to just their entries.
 - A shared "Suggested contacts" queue — drop in a name worth reaching out to, anyone can claim it.
-- A daily auto-scan (`api/scrape.js`, free Vercel cron) that checks pages you point it at — department "notable alumni" pages, news/spotlight listings — for names and feeds new ones straight into the suggestions queue. Not LinkedIn (blocked to scrapers, against their terms) — just public pages meant to be browsed. It's a heuristic, not perfect: treat what it finds as a lead to glance at and claim or dismiss, not a verified fact.
+- Two daily auto-discovery jobs (free Vercel crons) that feed the suggestions queue automatically:
+  - **Page scan** (`api/scrape.js`) — checks specific pages you point it at (a department's "notable alumni" page, a spotlight listing) for names.
+  - **Search-based discovery** (`api/search.js`) — runs search queries you configure through Google's Custom Search API (free, 100 queries/day) and pulls candidate names out of the results — including what's publicly indexed about LinkedIn profiles, without scraping LinkedIn directly (which blocks scrapers and disallows it in their terms).
+  
+  Both are heuristics, not verified facts — treat anything they surface as a lead to glance at and claim or dismiss, same as a suggestion a person typed in by hand.
 - Everything's shared and updates live across everyone who has the page open.
 
-## Pointing the auto-scan at a page
+## Setting up auto-discovery
 
-Add a row to the `watch_pages` table in Supabase (SQL Editor):
-
+**Page scan** — add a row to `watch_pages` in Supabase (SQL Editor):
 ```sql
 insert into watch_pages (url, label) values
-  ('https://business.uconn.edu/notable-alumni/', 'UConn School of Business — notable alumni');
+  ('https://alumni.business.uconn.edu/hof/past-inductees/', 'UConn Business Hall of Fame');
 ```
+Trigger it immediately by opening `/api/scrape` in a browser, or wait for the daily run.
 
-It'll get checked on the next daily run (or trigger one immediately by opening `/api/scrape` in a browser).
+**Search-based discovery** — needs a free Google Custom Search setup (~10 min, no payment info required):
+1. Go to [console.cloud.google.com](https://console.cloud.google.com), create a project (or use an existing one), and enable the **Custom Search API** under APIs & Services.
+2. Create an API key under APIs & Services → Credentials. This is `GOOGLE_SEARCH_API_KEY`.
+3. Go to [programmablesearchengine.google.com](https://programmablesearchengine.google.com), create a new search engine, set it to **search the entire web**. Copy its **Search engine ID** — this is `GOOGLE_SEARCH_CX`.
+4. In Vercel → Settings → Environment Variables, add both as Production variables, then redeploy.
+5. Add search queries to run in Supabase:
+   ```sql
+   insert into search_queries (query, label) values
+     ('"Connect.AI" UConn alumni', 'Connect.AI alumni mentions'),
+     ('UConn computer science alumni AI startup', 'CS alumni working in AI');
+   ```
+6. Trigger it immediately by opening `/api/search` in a browser, or wait for the daily run.
+
+Free tier caps at 100 Google searches/day total across all queries — plenty for a handful of daily queries with room to spare.
 
 ## Stack
 
-Plain HTML/JS front end, no build step, hosted on Vercel. Data and screenshot storage run on Supabase (Postgres + Storage). A small serverless function (`api/scrape.js`) runs on Vercel's free daily cron for the auto-scan. See `supabase/schema.sql` and `supabase/migrations/` for the database setup.
+Plain HTML/JS front end, no build step, hosted on Vercel. Data and screenshot storage run on Supabase (Postgres + Storage). Two small serverless functions (`api/scrape.js`, `api/search.js`) run on Vercel's free daily cron for auto-discovery. See `supabase/schema.sql` and `supabase/migrations/` for the database setup.

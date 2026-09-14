@@ -9,6 +9,7 @@
     }
   ],
   "crons": [
-    { "path": "/api/scrape", "schedule": "0 13 * * *" }
+    { "path": "/api/scrape", "schedule": "0 13 * * *" },
+    { "path": "/api/search", "schedule": "0 14 * * *" }
   ]
 }

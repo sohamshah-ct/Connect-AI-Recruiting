@@ -10,41 +10,19 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const cheerio = require('cheerio');
+const { looksLikeName } = require('../lib/nameFilter');
 
-const NAME_RE = /^[A-Z][a-zA-Z'’.-]+(?:\s+[A-Z][a-zA-Z'’.-]+){1,3}$/;
 const CARD_SELECTORS = 'article, li, .card, .person, .profile, .alum, .alumni, .spotlight, .people, .team-member, .bio';
-const HEADING_SELECTORS = 'h1, h2, h3, h4, strong, b';
+const HEADING_SELECTORS = 'h1, h2, h3, h4, h5, strong, b';
 const NON_HUMAN_SITE_CHROME = 'script, style, noscript, nav, footer, header, form, [id*="cookie" i], [class*="cookie" i], [id*="consent" i], [class*="consent" i], [id*="onetrust" i], [class*="onetrust" i], [id*="privacy" i], [class*="privacy" i], [id*="gdpr" i], [class*="gdpr" i], [role="dialog"], [aria-modal="true"]';
-
-// Words that show up in site chrome (cookie banners, nav, section titles)
-// and would otherwise pass the "looks like a capitalized phrase" check.
-const BANNED_WORDS = new Set([
-  'cookie', 'cookies', 'tracking', 'protection', 'consent', 'privacy',
-  'party', 'third-party', 'enhanced', 'persistent', 'strict', 'custom',
-  'block', 'blocking', 'manually', 'choose', 'section', 'settings',
-  'preferences', 'nominate', 'nomination', 'nominations', 'inductees',
-  'inductee', 'members', 'member', 'alumni', 'alumnus', 'hall', 'fame',
-  'read', 'more', 'contact', 'learn', 'apply', 'about', 'team', 'our',
-  'get', 'involved', 'quick', 'links', 'skip', 'menu', 'search', 'login',
-  'sign', 'subscribe', 'newsletter', 'share', 'follow', 'accept', 'decline',
-  'notable', 'featured', 'spotlight', 'profiles', 'news', 'events',
-]);
-
-function looksLikeName(text) {
-  const t = text.trim().replace(/\s+/g, ' ');
-  if (!t || t.length > 45) return false;
-  if (/\d/.test(t)) return false;
-  if (!NAME_RE.test(t)) return false;
-  const words = t.toLowerCase().split(/\s+/);
-  if (words.some(w => BANNED_WORDS.has(w))) return false;
-  return true;
-}
 
 function extractCandidates(html, sourceUrl) {
   const $ = cheerio.load(html);
   $(NON_HUMAN_SITE_CHROME).remove();
   const found = new Map();
 
+  // Pass 1: card-shaped containers (bio pages, spotlight lists) — the
+  // strongest signal, since heading + paragraph is a real profile shape.
   $(CARD_SELECTORS).each((_, card) => {
     const $card = $(card);
     const heading = $card.find(HEADING_SELECTORS).first();
@@ -54,10 +32,29 @@ function extractCandidates(html, sourceUrl) {
     let bio = $card.find('p').first().text().trim().replace(/\s+/g, ' ');
     if (!bio || bio === nameText) bio = $card.text().trim().replace(/\s+/g, ' ').slice(0, 160);
     bio = bio.slice(0, 160);
-    if (!looksLikeName(nameText) || !bio) return;
+    if (!bio) return;
 
     if (!found.has(nameText)) found.set(nameText, bio);
   });
+
+  // Pass 2: fallback for pages that just list names as plain headings or
+  // links (a Hall of Fame roster, a simple bulleted list) with no obvious
+  // "card" wrapper. Lower precision, so cap how many it can add.
+  if (found.size < 30) {
+    $(`${HEADING_SELECTORS}, a`).each((_, el) => {
+      if (found.size >= 30) return false;
+      const $el = $(el);
+      const nameText = $el.text().trim();
+      if (!looksLikeName(nameText) || found.has(nameText)) return;
+
+      let bio = $el.next('p').text().trim().replace(/\s+/g, ' ');
+      if (!bio) bio = $el.parent().next('p').text().trim().replace(/\s+/g, ' ');
+      if (!bio) bio = $el.closest('li, p').text().trim().replace(/\s+/g, ' ').slice(0, 160);
+      bio = bio.slice(0, 160);
+
+      found.set(nameText, bio);
+    });
+  }
 
   return Array.from(found, ([alum_name, bio]) => ({
     alum_name,
