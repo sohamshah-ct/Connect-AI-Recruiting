@@ -692,7 +692,10 @@ function renderSources(){
   qEl.querySelectorAll('.del-query-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       if(!confirm('Remove this search query?')) return;
-      removeSource('search_queries', btn.dataset.id, () => { allQueries = allQueries.filter(q => q.id !== btn.dataset.id); });
+      const removed = allQueries.find(q => q.id === btn.dataset.id);
+      removeSource('search_queries', btn.dataset.id,
+        () => { allQueries = allQueries.filter(q => q.id !== btn.dataset.id); },
+        () => { if(removed) allQueries.unshift(removed); });
     });
   });
 
@@ -708,7 +711,10 @@ function renderSources(){
   pEl.querySelectorAll('.del-page-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       if(!confirm('Stop watching this page?')) return;
-      removeSource('watch_pages', btn.dataset.id, () => { allPages = allPages.filter(p => p.id !== btn.dataset.id); });
+      const removed = allPages.find(p => p.id === btn.dataset.id);
+      removeSource('watch_pages', btn.dataset.id,
+        () => { allPages = allPages.filter(p => p.id !== btn.dataset.id); },
+        () => { if(removed) allPages.unshift(removed); });
     });
   });
 
@@ -724,17 +730,25 @@ function renderSources(){
   dEl.querySelectorAll('.del-domain-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       if(!confirm('Stop discovering from this domain?')) return;
-      removeSource('discover_domains', btn.dataset.id, () => { allDomains = allDomains.filter(d => d.id !== btn.dataset.id); });
+      const removed = allDomains.find(d => d.id === btn.dataset.id);
+      removeSource('discover_domains', btn.dataset.id,
+        () => { allDomains = allDomains.filter(d => d.id !== btn.dataset.id); },
+        () => { if(removed) allDomains.unshift(removed); });
     });
   });
 }
 
-async function removeSource(table, id, localUpdate){
+async function removeSource(table, id, localUpdate, restore){
   localUpdate();
   renderSources();
   if(supa){
     const {error} = await supa.from(table).delete().eq('id', id);
-    if(error) console.error(error);
+    if(error){
+      console.error(error);
+      restore();
+      renderSources();
+      alert(`Could not remove it — the database refused the delete: ${error.message}`);
+    }
   }
 }
 
@@ -857,11 +871,17 @@ async function claimSuggestion(id, name){
 }
 
 async function removeSuggestion(id){
+  const removed = allSuggestions.find(s => s.id === id);
   allSuggestions = allSuggestions.filter(s => s.id !== id);
-  renderSuggestions();
+  render();
   if(supa){
     const {error} = await supa.from('suggestions').delete().eq('id', id);
-    if(error) console.error(error);
+    if(error){
+      console.error(error);
+      if(removed) allSuggestions.unshift(removed);
+      render();
+      alert(`Could not remove it — the database refused the delete: ${error.message}`);
+    }
   }
 }
 
