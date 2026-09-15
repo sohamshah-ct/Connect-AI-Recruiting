@@ -16,7 +16,7 @@
 // glance at and claim or dismiss, same as any other suggestion.
 
 const { createClient } = require('@supabase/supabase-js');
-const { looksLikeName, isRelevantBio } = require('../lib/nameFilter');
+const { looksLikeName, isRelevantBio, isNotAlumniBio } = require('../lib/nameFilter');
 const { ddgSearch } = require('../lib/ddg');
 
 // DuckDuckGo result titles are usually "Name - Site", "Name | Site",
@@ -75,7 +75,7 @@ module.exports = async (req, res) => {
         known.add(key);
 
         const snippet = (item.snippet || '').replace(/\s+/g, ' ').slice(0, 120);
-        if (!isRelevantBio(snippet)) continue;
+        if (!isRelevantBio(snippet) || isNotAlumniBio(snippet)) continue;
         const note = `Found via search — ${snippet || item.link}`.slice(0, 180);
 
         const { error: insErr } = await supa.from('suggestions').insert({
