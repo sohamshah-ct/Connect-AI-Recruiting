@@ -105,7 +105,7 @@ module.exports = async (req, res) => {
         last_found_count: added,
       }).eq('id', domain.id);
 
-      results.push({ host: domain.host, indexedUrls: records.length, pagesChecked: pagesFetched, added });
+      results.push({ host: domain.host, indexedUrls: records.length, pagesChecked: pagesFetched, added, checkedUrls: candidateUrls });
     } catch (err) {
       results.push({ host: domain.host, error: err.message });
     }
